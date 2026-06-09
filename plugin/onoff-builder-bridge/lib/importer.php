@@ -700,7 +700,8 @@ if (!function_exists('onoff_builder_replace_project_from_zip')) {
             return array('ok' => false, 'message' => '프로젝트 경로를 확인할 수 없습니다.');
         }
 
-        $temp = $project_dir . '/.obb-dist-' . getmypid() . '-' . time();
+        $temp = rtrim(sys_get_temp_dir(), '/\\') . '/onoff-builder-replace-'
+            . $project_id . '-' . getmypid() . '-' . time();
         if (is_dir($temp)) {
             onoff_builder_remove_dir($temp);
         }
@@ -729,7 +730,25 @@ if (!function_exists('onoff_builder_replace_project_from_zip')) {
         if (is_dir($project_dir)) {
             onoff_builder_remove_dir($project_dir);
         }
-        if (!@rename($temp, $project_dir)) {
+
+        $replaced = false;
+        if (@rename($temp, $project_dir)) {
+            $replaced = true;
+        } else {
+            if (!onoff_builder_ensure_dir($project_dir)) {
+                onoff_builder_remove_dir($temp);
+                return array('ok' => false, 'message' => '프로젝트 폴더를 만들 수 없습니다.');
+            }
+            if (!onoff_builder_move_dir_contents($temp, $project_dir)) {
+                onoff_builder_remove_dir($temp);
+                onoff_builder_remove_dir($project_dir);
+                return array('ok' => false, 'message' => '프로젝트 폴더 교체에 실패했습니다. 서버 쓰기 권한을 확인해 주세요.');
+            }
+            onoff_builder_remove_dir($temp);
+            $replaced = true;
+        }
+
+        if (!$replaced) {
             onoff_builder_remove_dir($temp);
             return array('ok' => false, 'message' => '프로젝트 폴더 교체에 실패했습니다.');
         }
