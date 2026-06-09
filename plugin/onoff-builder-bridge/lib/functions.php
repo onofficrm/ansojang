@@ -399,29 +399,44 @@ if (!function_exists('onoff_builder_add_import')) {
 
         foreach ($items as $idx => $row) {
             if (isset($row['id']) && $row['id'] === $id) {
-                $items[$idx] = array(
-                    'id'         => $id,
-                    'name'       => isset($data['name']) && $data['name'] !== '' ? $data['name'] : $id,
-                    'path'       => isset($data['path']) && $data['path'] !== '' ? $data['path'] : $id,
-                    'entry'      => isset($data['entry']) && $data['entry'] !== '' ? $data['entry'] : 'index.html',
-                    'created_at' => isset($row['created_at']) ? $row['created_at'] : date('Y-m-d H:i:s'),
-                );
+                $items[$idx] = onoff_builder_merge_import_row($id, $row, $data);
                 $found = true;
                 break;
             }
         }
 
         if (!$found) {
-            $items[] = array(
-                'id'         => $id,
-                'name'       => isset($data['name']) && $data['name'] !== '' ? $data['name'] : $id,
-                'path'       => isset($data['path']) && $data['path'] !== '' ? $data['path'] : $id,
-                'entry'      => isset($data['entry']) && $data['entry'] !== '' ? $data['entry'] : 'index.html',
-                'created_at' => date('Y-m-d H:i:s'),
-            );
+            $items[] = onoff_builder_merge_import_row($id, array(), $data);
         }
 
         return onoff_builder_save_imports($items);
+    }
+}
+
+if (!function_exists('onoff_builder_merge_import_row')) {
+    function onoff_builder_merge_import_row($id, array $existing, array $data)
+    {
+        $row = array(
+            'id'         => $id,
+            'name'       => isset($data['name']) && $data['name'] !== '' ? $data['name'] : $id,
+            'path'       => isset($data['path']) && $data['path'] !== '' ? $data['path'] : $id,
+            'entry'      => array_key_exists('entry', $data) ? (string) $data['entry'] : (isset($existing['entry']) ? (string) $existing['entry'] : 'index.html'),
+            'created_at' => isset($existing['created_at']) ? $existing['created_at'] : date('Y-m-d H:i:s'),
+        );
+
+        if (array_key_exists('needs_build', $data)) {
+            $row['needs_build'] = !empty($data['needs_build']);
+        } elseif (isset($existing['needs_build'])) {
+            $row['needs_build'] = !empty($existing['needs_build']);
+        }
+
+        if (array_key_exists('builder_source', $data)) {
+            $row['builder_source'] = !empty($data['builder_source']);
+        } elseif (isset($existing['builder_source'])) {
+            $row['builder_source'] = !empty($existing['builder_source']);
+        }
+
+        return $row;
     }
 }
 

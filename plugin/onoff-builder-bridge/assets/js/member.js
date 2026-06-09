@@ -82,6 +82,35 @@
     });
   }
 
+  var buildBtn = document.getElementById('obb-build-source');
+  if (buildBtn) {
+    buildBtn.addEventListener('click', function () {
+      var projectId = buildBtn.getAttribute('data-project-id') || '';
+      if (!projectId) {
+        return;
+      }
+      if (!window.confirm('iCRM 서버에서 빌드를 실행할까요? (1~3분 소요될 수 있습니다)')) {
+        return;
+      }
+      buildBtn.disabled = true;
+      showMsg('iCRM에서 빌드 중입니다. 잠시만 기다려 주세요…', 'busy');
+      postAction('builder_source_build', { project_id: projectId })
+        .then(function (data) {
+          if (!data.ok) {
+            throw new Error((data.error || (data.result && data.result.message)) || '실패');
+          }
+          showMsg((data.result && data.result.message) || '빌드 완료', 'ok');
+          setTimeout(function () {
+            window.location.reload();
+          }, 1200);
+        })
+        .catch(function (err) {
+          showMsg(err.message || '요청 실패', 'err');
+          buildBtn.disabled = false;
+        });
+    });
+  }
+
   var rollbackBtn = document.getElementById('obb-rollback');
   if (rollbackBtn) {
     rollbackBtn.addEventListener('click', function () {

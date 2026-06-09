@@ -133,8 +133,133 @@ if (!function_exists('onoff_builder_is_vite_source_project')) {
 if (!function_exists('onoff_builder_vite_source_message')) {
     function onoff_builder_vite_source_message()
     {
-        return "이 ZIP은 빌드된 dist 결과물이 아니라 React/Vite 원본 프로젝트로 보입니다.\n"
-            . "터미널에서 npm install 후 npm run build를 실행하고, 생성된 dist 폴더를 ZIP으로 업로드해주세요.";
+        return "빌더 원본 프로젝트입니다. 아래 [iCRM에서 빌드]를 실행하거나, dist ZIP을 별도로 업로드해 주세요.";
+    }
+}
+
+if (!function_exists('onoff_builder_move_dir_contents')) {
+    function onoff_builder_move_dir_contents($from, $to)
+    {
+        $from = rtrim(str_replace('\\', '/', (string) $from), '/');
+        $to = rtrim(str_replace('\\', '/', (string) $to), '/');
+        if ($from === '' || $to === '' || !is_dir($from)) {
+            return false;
+        }
+        if (!is_dir($to) && !onoff_builder_ensure_dir($to)) {
+            return false;
+        }
+
+        $items = @scandir($from);
+        if (!is_array($items)) {
+            return false;
+        }
+
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+            $src = $from . '/' . $item;
+            $dst = $to . '/' . $item;
+            if (is_dir($src)) {
+                if (!onoff_builder_move_dir_contents($src, $dst)) {
+                    return false;
+                }
+                @rmdir($src);
+            } else {
+                if (is_file($dst)) {
+                    @unlink($dst);
+                }
+                if (!@rename($src, $dst)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+}
+
+if (!function_exists('onoff_builder_unwrap_single_root_dir')) {
+    /**
+     * ZIP 루트에 폴더 하나만 있으면 내용을 상위로 올림 (빌더 다운로드 ZIP 형식)
+     */
+    function onoff_builder_unwrap_single_root_dir($project_dir)
+    {
+        if (!is_dir($project_dir)) {
+            return false;
+        }
+
+        $items = array();
+        foreach (@scandir($project_dir) as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+            $items[] = $item;
+        }
+
+        if (count($items) !== 1) {
+            return false;
+        }
+
+        $only = $items[0];
+        $subdir = $project_dir . '/' . $only;
+        if (!is_dir($subdir)) {
+            return false;
+        }
+
+        $temp = $project_dir . '/.obb-unwrap-' . getmypid();
+        if (!@rename($subdir, $temp)) {
+            return false;
+        }
+        if (!onoff_builder_move_dir_contents($temp, $project_dir)) {
+            @rename($temp, $subdir);
+            return false;
+        }
+        @rmdir($temp);
+
+        return true;
+    }
+}
+
+if (!function_exists('onoff_builder_normalize_uploaded_project')) {
+    /**
+     * 업로드 ZIP 정규화 후 배포 가능 여부 판단
+     *
+     * @return array{status:string,entry:string,needs_build:bool,builder_source:bool}
+     */
+    function onoff_builder_normalize_uploaded_project($project_dir)
+    {
+        for ($i = 0; $i < 3; $i++) {
+            if (!onoff_builder_unwrap_single_root_dir($project_dir)) {
+                break;
+            }
+        }
+
+        $entry = onoff_builder_find_index_html($project_dir);
+        if ($entry !== '') {
+            return array(
+                'status'         => 'ready',
+                'entry'          => $entry,
+                'needs_build'    => false,
+                'builder_source' => false,
+            );
+        }
+
+        if (onoff_builder_is_vite_source_project($project_dir)) {
+            return array(
+                'status'         => 'needs_build',
+                'entry'          => '',
+                'needs_build'    => true,
+                'builder_source' => true,
+            );
+        }
+
+        return array(
+            'status'         => 'invalid',
+            'entry'          => '',
+            'needs_build'    => false,
+            'builder_source' => false,
+        );
     }
 }
 
@@ -354,8 +479,9 @@ if (!function_exists('onoff_builder_extract_zip')) {
 }
 
 if (!function_exists('onoff_builder_handle_zip_upload')) {
-    function onoff_builder_handle_zip_upload($project_id, $project_name, $file)
+    function onoff_builder_handle_zip_upload($project_id, $project_name, $file, array $options = array())
     {
+        $dist_only = !empty($options['dist_only']);
         if (!onoff_builder_validate_project_id($project_id)) {
             return array('ok' => false, 'message' => '프로젝트 ID는 영문 소문자, 숫자, 하이픈(-), 언더스코어(_)만 사용할 수 있습니다.');
         }
@@ -399,30 +525,128 @@ if (!function_exists('onoff_builder_handle_zip_upload')) {
             return array('ok' => false, 'message' => $extract['message']);
         }
 
-        if (onoff_builder_is_vite_source_project($project_dir)) {
-            onoff_builder_remove_dir($project_dir);
-            return array('ok' => false, 'message' => onoff_builder_vite_source_message());
-        }
+        if ($dist_only) {
+            for ($i = 0; $i < 3; $i++) {
+                if (!onoff_builder_unwrap_single_root_dir($project_dir)) {
+                    break;
+                }
+            }
+            $entry = onoff_builder_find_index_html($project_dir);
+            if ($entry === '') {
+                onoff_builder_remove_dir($project_dir);
+                return array(
+                    'ok'      => false,
+                    'message' => 'index.html을 찾을 수 없습니다. npm run build 후 dist 폴더를 ZIP으로 업로드해 주세요.',
+                );
+            }
 
-        $entry = onoff_builder_find_index_html($project_dir);
-        if ($entry === '') {
-            onoff_builder_remove_dir($project_dir);
             return array(
-                'ok'      => false,
-                'message' => 'index.html을 찾을 수 없습니다. 빌드된 dist 결과물(ZIP)을 업로드해주세요.',
+                'ok'             => true,
+                'message'        => '빌드 결과(dist)가 적용되었습니다. [배포하고 바로 적용]을 눌러 주세요.',
+                'project_id'     => $project_id,
+                'project_name'   => $project_name,
+                'entry'          => $entry,
+                'replaced'       => $replacing,
+                'needs_build'    => false,
+                'builder_source' => false,
             );
         }
 
+        $prep = onoff_builder_normalize_uploaded_project($project_dir);
+        if ($prep['status'] === 'invalid') {
+            onoff_builder_remove_dir($project_dir);
+            return array(
+                'ok'      => false,
+                'message' => 'index.html을 찾을 수 없습니다. 빌더 ZIP 또는 dist ZIP을 업로드해 주세요.',
+            );
+        }
+
+        if ($prep['status'] === 'needs_build') {
+            return array(
+                'ok'             => true,
+                'message'        => '빌더 원본이 저장되었습니다. [iCRM에서 빌드]를 실행하거나 dist ZIP을 별도로 업로드한 뒤 [배포하고 바로 적용]을 눌러 주세요.',
+                'project_id'     => $project_id,
+                'project_name'   => $project_name,
+                'entry'          => '',
+                'replaced'       => $replacing,
+                'needs_build'    => true,
+                'builder_source' => true,
+            );
+        }
+
+        $message = $replacing
+            ? '기존 프로젝트를 새 ZIP으로 교체했습니다. [배포하고 바로 적용]을 눌러 주세요.'
+            : '업로드가 완료되었습니다. [배포하고 바로 적용]을 눌러 주세요.';
+        if ($prep['entry'] !== 'index.html' && $prep['entry'] !== '') {
+            $message = '빌더 ZIP에서 dist를 찾아 적용했습니다. [배포하고 바로 적용]을 눌러 주세요.';
+        }
+
         return array(
-            'ok'           => true,
-            'message'      => $replacing
-                ? '기존 프로젝트를 새 ZIP으로 교체했습니다. [배포하고 바로 적용]을 눌러 주세요.'
-                : '업로드가 완료되었습니다.',
-            'project_id'   => $project_id,
-            'project_name' => $project_name,
-            'entry'        => $entry,
-            'replaced'     => $replacing,
+            'ok'             => true,
+            'message'        => $message,
+            'project_id'     => $project_id,
+            'project_name'   => $project_name,
+            'entry'          => $prep['entry'],
+            'replaced'       => $replacing,
+            'needs_build'    => false,
+            'builder_source' => !empty($prep['builder_source']),
         );
+    }
+}
+
+if (!function_exists('onoff_builder_replace_project_from_zip')) {
+    /**
+     * dist ZIP으로 프로젝트 폴더 교체 (iCRM 빌드 결과 적용)
+     *
+     * @return array{ok:bool,message?:string,entry?:string}
+     */
+    function onoff_builder_replace_project_from_zip($project_id, $zip_path)
+    {
+        if (!onoff_builder_validate_project_id($project_id)) {
+            return array('ok' => false, 'message' => '프로젝트 ID가 올바르지 않습니다.');
+        }
+
+        $project_id = onoff_builder_sanitize_project_id($project_id);
+        $project_dir = onoff_builder_project_dir($project_id);
+        if ($project_dir === '') {
+            return array('ok' => false, 'message' => '프로젝트 경로를 확인할 수 없습니다.');
+        }
+
+        $temp = $project_dir . '/.obb-dist-' . getmypid() . '-' . time();
+        if (is_dir($temp)) {
+            onoff_builder_remove_dir($temp);
+        }
+        if (!onoff_builder_ensure_dir($temp)) {
+            return array('ok' => false, 'message' => '임시 폴더를 만들 수 없습니다.');
+        }
+
+        $extract = onoff_builder_extract_zip($zip_path, $temp);
+        if (!$extract['ok']) {
+            onoff_builder_remove_dir($temp);
+            return array('ok' => false, 'message' => $extract['message']);
+        }
+
+        for ($i = 0; $i < 3; $i++) {
+            if (!onoff_builder_unwrap_single_root_dir($temp)) {
+                break;
+            }
+        }
+
+        $entry = onoff_builder_find_index_html($temp);
+        if ($entry === '') {
+            onoff_builder_remove_dir($temp);
+            return array('ok' => false, 'message' => '빌드 결과에 index.html이 없습니다.');
+        }
+
+        if (is_dir($project_dir)) {
+            onoff_builder_remove_dir($project_dir);
+        }
+        if (!@rename($temp, $project_dir)) {
+            onoff_builder_remove_dir($temp);
+            return array('ok' => false, 'message' => '프로젝트 폴더 교체에 실패했습니다.');
+        }
+
+        return array('ok' => true, 'entry' => $entry, 'message' => '빌드 결과가 적용되었습니다.');
     }
 }
 
@@ -446,15 +670,28 @@ if (!function_exists('onoff_builder_zip_project_dir')) {
             return array('ok' => false, 'message' => '프로젝트 폴더를 찾을 수 없습니다.');
         }
 
+        $zipRoot = $dir;
+        $import = onoff_builder_get_import($project_id);
+        $entry = is_array($import) && !empty($import['entry']) ? (string) $import['entry'] : 'index.html';
+        if ($entry !== '' && $entry !== 'index.html') {
+            $entry_dir = dirname(str_replace('\\', '/', $entry));
+            if ($entry_dir !== '' && $entry_dir !== '.') {
+                $candidate = $dir . '/' . $entry_dir;
+                if (is_dir($candidate)) {
+                    $zipRoot = $candidate;
+                }
+            }
+        }
+
         $zipPath = sys_get_temp_dir() . '/onoff-builder-' . onoff_builder_sanitize_project_id($project_id) . '-' . time() . '.zip';
         $zip = new ZipArchive();
         if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
             return array('ok' => false, 'message' => 'ZIP 파일을 만들 수 없습니다.');
         }
 
-        $baseLen = strlen(rtrim(str_replace('\\', '/', $dir), '/')) + 1;
+        $baseLen = strlen(rtrim(str_replace('\\', '/', $zipRoot), '/')) + 1;
         $it = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS)
+            new RecursiveDirectoryIterator($zipRoot, FilesystemIterator::SKIP_DOTS)
         );
 
         foreach ($it as $file) {

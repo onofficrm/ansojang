@@ -118,7 +118,7 @@ if ($action === 'board_connect') {
     exit;
 }
 
-if (in_array($action, array('publish_apply', 'builder_pull', 'builder_rollback', 'builder_status'), true)) {
+if (in_array($action, array('publish_apply', 'builder_pull', 'builder_rollback', 'builder_status', 'builder_source_build'), true)) {
     icrm_member_require_json('design');
     if ($action === 'builder_status') {
         echo json_encode(array('ok' => true, 'status' => icrm_builder_deploy_check_status()), JSON_UNESCAPED_UNICODE);
@@ -131,10 +131,32 @@ if (in_array($action, array('publish_apply', 'builder_pull', 'builder_rollback',
             exit;
         }
         $import = onoff_builder_get_import($project_id);
+        if (is_array($import) && !empty($import['needs_build'])) {
+            echo json_encode(array('ok' => false, 'error' => '빌드가 필요한 프로젝트입니다. [iCRM에서 빌드]를 실행하거나 dist ZIP을 업로드해 주세요.'), JSON_UNESCAPED_UNICODE);
+            exit;
+        }
         $project_name = is_array($import) && !empty($import['name']) ? (string) $import['name'] : $project_id;
         $result = icrm_builder_deploy_publish_and_apply($project_id, $project_name, array(
             'connect_home' => !empty($_POST['connect_home']),
         ));
+        echo json_encode(array(
+            'ok'     => !empty($result['success']),
+            'result' => $result,
+            'error'  => empty($result['success']) ? ($result['message'] ?? '실패') : '',
+        ), JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    if ($action === 'builder_source_build') {
+        $project_id = isset($_POST['project_id']) ? $_POST['project_id'] : '';
+        if (!onoff_builder_validate_project_id($project_id) || !onoff_builder_project_exists($project_id)) {
+            echo json_encode(array('ok' => false, 'error' => '프로젝트를 찾을 수 없습니다.'), JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        if (!function_exists('icrm_builder_deploy_build_source_project')) {
+            echo json_encode(array('ok' => false, 'error' => '빌더 빌드 모듈이 없습니다.'), JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        $result = icrm_builder_deploy_build_source_project($project_id);
         echo json_encode(array(
             'ok'     => !empty($result['success']),
             'result' => $result,

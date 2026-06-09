@@ -145,7 +145,7 @@ if (!function_exists('icrm_builder_deploy_preview_admin_url')) {
 }
 
 if (!function_exists('icrm_builder_deploy_api_post_json')) {
-    function icrm_builder_deploy_api_post_json($endpoint, array $payload)
+    function icrm_builder_deploy_api_post_json($endpoint, array $payload, $timeout = 120)
     {
         if (!function_exists('icrm_api_post_json') && is_file(G5_LIB_PATH . '/icrm-update.lib.php')) {
             include_once G5_LIB_PATH . '/icrm-update.lib.php';
@@ -153,7 +153,7 @@ if (!function_exists('icrm_builder_deploy_api_post_json')) {
 
         $url = icrm_builder_deploy_get_api_base_url() . '/' . ltrim((string) $endpoint, '/');
         if (function_exists('icrm_api_post_json')) {
-            return icrm_api_post_json($url, $payload);
+            return icrm_api_post_json($url, $payload, (int) $timeout);
         }
 
         $body = json_encode($payload, JSON_UNESCAPED_UNICODE);
@@ -162,7 +162,7 @@ if (!function_exists('icrm_builder_deploy_api_post_json')) {
                 'method'  => 'POST',
                 'header'  => "Content-Type: application/json\r\nAccept: application/json\r\n",
                 'content' => $body,
-                'timeout' => 120,
+                'timeout' => (int) $timeout,
             ),
         ));
         $raw = @file_get_contents($url, false, $ctx);
@@ -765,6 +765,10 @@ if (!function_exists('icrm_builder_deploy_publish_project')) {
         }
 
         $import = onoff_builder_get_import($project_id);
+        if (is_array($import) && !empty($import['needs_build'])) {
+            return array('success' => false, 'message' => '빌드가 필요한 프로젝트입니다. [iCRM에서 빌드]를 실행하거나 dist ZIP을 업로드해 주세요.');
+        }
+
         if ($project_name === '' && is_array($import) && !empty($import['name'])) {
             $project_name = (string) $import['name'];
         }
@@ -856,5 +860,110 @@ if (!function_exists('icrm_builder_deploy_publish_and_apply')) {
         $pull['home_url'] = icrm_builder_deploy_home_url();
 
         return $pull;
+    }
+}
+
+if (!function_exists('icrm_builder_deploy_build_source_project')) {
+    /**
+     * iCRM 서버에서 Vite 원본 빌드 후 dist를 사이트 imports에 적용
+     *
+     * @param string $project_id
+     * @return array
+     */
+    function icrm_builder_deploy_build_source_project($project_id)
+    {
+        if (icrm_builder_deploy_get_license_key() === '') {
+            return array('success' => false, 'message' => 'iCRM 라이선스가 설정되지 않았습니다.');
+        }
+
+        if (!is_file(G5_PLUGIN_PATH . '/onoff-builder-bridge/bootstrap.php')) {
+            return array('success' => false, 'message' => 'onoff-builder-bridge 플러그인이 없습니다.');
+        }
+
+        include_once G5_PLUGIN_PATH . '/onoff-builder-bridge/bootstrap.php';
+
+        if (!onoff_builder_validate_project_id($project_id) || !onoff_builder_project_exists($project_id)) {
+            return array('success' => false, 'message' => '프로젝트를 찾을 수 없습니다.');
+        }
+
+        $project_id = onoff_builder_sanitize_project_id($project_id);
+        $import = onoff_builder_get_import($project_id);
+        if (!is_array($import) || empty($import['needs_build'])) {
+            return array('success' => false, 'message' => '빌드가 필요한 원본 프로젝트가 아닙니다.');
+        }
+
+        $zip = onoff_builder_zip_project_dir($project_id);
+        if (empty($zip['ok']) || empty($zip['path'])) {
+            return array('success' => false, 'message' => isset($zip['message']) ? $zip['message'] : 'ZIP 생성 실패');
+        }
+
+        $zipPath = $zip['path'];
+        $raw = file_get_contents($zipPath);
+        @unlink($zipPath);
+
+        if ($raw === false || $raw === '') {
+            return array('success' => false, 'message' => 'ZIP 읽기 실패');
+        }
+
+        if (strlen($raw) > 50 * 1024 * 1024) {
+            return array('success' => false, 'message' => '프로젝트가 너무 큽니다. (최대 50MB)');
+        }
+
+        $domain = icrm_builder_deploy_site_domain();
+        if ($domain === '') {
+            return array('success' => false, 'message' => '배포 대상 도메인을 확인할 수 없습니다.');
+        }
+
+        $resp = icrm_builder_deploy_api_post_json('build-source', array(
+            'license_key' => icrm_builder_deploy_get_license_key(),
+            'domain'      => $domain,
+            'project_id'  => $project_id,
+            'zip_base64'  => base64_encode($raw),
+        ), 600);
+
+        if (empty($resp['success']) || empty($resp['zip_base64'])) {
+            return array(
+                'success' => false,
+                'message' => isset($resp['message']) ? (string) $resp['message'] : 'iCRM 빌드 실패',
+            );
+        }
+
+        $distRaw = base64_decode((string) $resp['zip_base64'], true);
+        if ($distRaw === false || $distRaw === '') {
+            return array('success' => false, 'message' => '빌드 결과 ZIP을 읽을 수 없습니다.');
+        }
+
+        $distZip = sys_get_temp_dir() . '/onoff-builder-dist-' . $project_id . '-' . time() . '.zip';
+        if (file_put_contents($distZip, $distRaw, LOCK_EX) === false) {
+            return array('success' => false, 'message' => '빌드 결과 저장 실패');
+        }
+
+        $apply = onoff_builder_replace_project_from_zip($project_id, $distZip);
+        @unlink($distZip);
+
+        if (empty($apply['ok'])) {
+            return array('success' => false, 'message' => isset($apply['message']) ? $apply['message'] : '빌드 결과 적용 실패');
+        }
+
+        $project_name = !empty($import['name']) ? (string) $import['name'] : $project_id;
+        if (!onoff_builder_add_import(array(
+            'id'             => $project_id,
+            'name'           => $project_name,
+            'path'           => $project_id,
+            'entry'          => isset($apply['entry']) ? (string) $apply['entry'] : 'index.html',
+            'needs_build'    => false,
+            'builder_source' => false,
+        ))) {
+            return array('success' => false, 'message' => '프로젝트 정보 저장 실패');
+        }
+
+        return array(
+            'success'  => true,
+            'message'  => 'iCRM에서 빌드가 완료되었습니다. [배포하고 바로 적용]을 눌러 주세요.',
+            'entry'    => isset($apply['entry']) ? (string) $apply['entry'] : 'index.html',
+            'page_url' => defined('G5_PLUGIN_URL')
+                ? G5_PLUGIN_URL . '/onoff-builder-bridge/page.php?id=' . rawurlencode($project_id)
+                : '',
+        );
     }
 }

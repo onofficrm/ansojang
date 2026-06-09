@@ -16,7 +16,12 @@ if (!isset($_FILES['zip_file'])) {
     onoff_builder_member_portal_redirect('ZIP 파일을 선택하세요.');
 }
 
-$result = onoff_builder_handle_zip_upload($project_id, $project_name, $_FILES['zip_file']);
+$result = onoff_builder_handle_zip_upload(
+    $project_id,
+    $project_name,
+    $_FILES['zip_file'],
+    array('dist_only' => !empty($_POST['dist_only']))
+);
 
 if (empty($result['ok'])) {
     onoff_builder_member_portal_redirect(
@@ -28,10 +33,12 @@ $id = $result['project_id'];
 $entry = isset($result['entry']) ? $result['entry'] : 'index.html';
 
 if (!onoff_builder_add_import(array(
-    'id'    => $id,
-    'name'  => $result['project_name'],
-    'path'  => $id,
-    'entry' => $entry,
+    'id'             => $id,
+    'name'           => $result['project_name'],
+    'path'           => $id,
+    'entry'          => $entry,
+    'needs_build'    => !empty($result['needs_build']),
+    'builder_source' => !empty($result['builder_source']),
 ))) {
     onoff_builder_remove_dir(onoff_builder_project_dir($id));
     onoff_builder_member_portal_redirect('프로젝트 정보 저장에 실패했습니다.');

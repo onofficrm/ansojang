@@ -24,6 +24,19 @@ if ($default_project_id !== '' && onoff_builder_project_exists($default_project_
     }
 }
 
+$default_project_needs_build = false;
+if ($default_project_id !== '') {
+    $default_import = onoff_builder_get_import($default_project_id);
+    $default_project_needs_build = is_array($default_import) && !empty($default_import['needs_build']);
+}
+
+$needs_build_projects = array();
+foreach ($projects as $proj) {
+    if (!empty($proj['needs_build'])) {
+        $needs_build_projects[] = $proj;
+    }
+}
+
 $license_ok = false;
 $deploy_ready = false;
 $deploy_message = '';
@@ -88,8 +101,8 @@ $design_action_url = defined('ICRM_MEMBER_DESIGN_EMBED') && function_exists('icr
 
 <div class="onoff-builder-member__steps">
   <section class="onoff-builder-member__step">
-    <h2>1. dist ZIP 업로드</h2>
-    <p>빌드 완료된 ZIP만 업로드하세요. (<code>index.html</code> + <code>assets/</code>)</p>
+    <h2>1. 빌더 ZIP 업로드</h2>
+    <p>빌더에서 다운받은 ZIP을 그대로 올리세요. dist가 포함되어 있으면 바로 배포할 수 있고, 원본만 있으면 아래 빌드 단계로 진행합니다.</p>
     <?php if (!$zip_ok) { ?>
     <p class="onoff-builder-admin__alert">서버에 ZipArchive가 없어 업로드를 사용할 수 없습니다.</p>
     <?php } else { ?>
@@ -103,7 +116,7 @@ $design_action_url = defined('ICRM_MEMBER_DESIGN_EMBED') && function_exists('icr
         <input type="text" name="project_name" id="project_name" required maxlength="100" value="<?php echo onoff_builder_escape($default_project_name); ?>" placeholder="메인 홈페이지">
       </div>
       <div class="onoff-builder-admin__field">
-        <label for="zip_file">dist ZIP</label>
+        <label for="zip_file">빌더 ZIP</label>
         <input type="file" name="zip_file" id="zip_file" accept=".zip,application/zip" required>
       </div>
       <div class="onoff-builder-admin__form-actions">
@@ -112,6 +125,48 @@ $design_action_url = defined('ICRM_MEMBER_DESIGN_EMBED') && function_exists('icr
     </form>
     <?php } ?>
   </section>
+
+  <?php if ($needs_build_projects !== array() && $zip_ok) { ?>
+  <section class="onoff-builder-member__step" id="obb-build-step">
+    <h2>1-2. 빌드 (원본 ZIP 업로드 후)</h2>
+    <p>원본 프로젝트가 저장된 경우, iCRM에서 빌드하거나 로컬에서 <code>npm run build</code> 후 dist ZIP을 별도로 업로드할 수 있습니다.</p>
+
+    <div class="onoff-builder-admin__form-actions" style="margin-bottom:16px">
+      <button type="button" class="onoff-builder-admin__btn onoff-builder-admin__btn--primary" id="obb-build-source"
+        data-project-id="<?php echo onoff_builder_escape($default_project_id); ?>"
+        <?php echo ($license_ok && $default_project_needs_build && function_exists('icrm_builder_deploy_build_source_project')) ? '' : 'disabled'; ?>>
+        iCRM에서 빌드
+      </button>
+    </div>
+
+    <form class="onoff-builder-admin__form" method="post" action="<?php echo onoff_builder_escape($upload_action); ?>" enctype="multipart/form-data">
+      <input type="hidden" name="dist_only" value="1">
+      <div class="onoff-builder-admin__field">
+        <label for="dist_project_id">프로젝트 ID</label>
+        <select name="project_id" id="dist_project_id" required>
+          <?php foreach ($needs_build_projects as $proj) {
+              $pid = isset($proj['id']) ? (string) $proj['id'] : '';
+              $pname = isset($proj['name']) ? (string) $proj['name'] : $pid;
+              $selected = ($pid === $default_project_id) ? ' selected' : '';
+              ?>
+          <option value="<?php echo onoff_builder_escape($pid); ?>"<?php echo $selected; ?>><?php echo onoff_builder_escape($pname); ?> (<?php echo onoff_builder_escape($pid); ?>)</option>
+          <?php } ?>
+        </select>
+      </div>
+      <div class="onoff-builder-admin__field">
+        <label for="dist_project_name">프로젝트 이름</label>
+        <input type="text" name="project_name" id="dist_project_name" required maxlength="100" value="<?php echo onoff_builder_escape($default_project_name); ?>">
+      </div>
+      <div class="onoff-builder-admin__field">
+        <label for="dist_zip_file">dist ZIP (별도 업로드)</label>
+        <input type="file" name="zip_file" id="dist_zip_file" accept=".zip,application/zip" required>
+      </div>
+      <div class="onoff-builder-admin__form-actions">
+        <button type="submit" class="onoff-builder-admin__btn">dist ZIP 업로드</button>
+      </div>
+    </form>
+  </section>
+  <?php } ?>
 
   <section class="onoff-builder-member__step">
     <h2>2. 배포하고 바로 적용</h2>
@@ -127,8 +182,9 @@ $design_action_url = defined('ICRM_MEMBER_DESIGN_EMBED') && function_exists('icr
             $pid = isset($p['id']) ? $p['id'] : '';
             $pname = isset($p['name']) ? $p['name'] : $pid;
             $selected = ($pid === $default_project_id) ? ' selected' : '';
+            $needs_build = !empty($p['needs_build']) ? ' data-needs-build="1"' : '';
             ?>
-        <option value="<?php echo onoff_builder_escape($pid); ?>"<?php echo $selected; ?>><?php echo onoff_builder_escape($pname); ?> (<?php echo onoff_builder_escape($pid); ?>)</option>
+        <option value="<?php echo onoff_builder_escape($pid); ?>"<?php echo $selected . $needs_build; ?>><?php echo onoff_builder_escape($pname); ?><?php echo !empty($p['needs_build']) ? ' (빌드 필요)' : ''; ?> (<?php echo onoff_builder_escape($pid); ?>)</option>
         <?php } ?>
       </select>
     </div>
@@ -148,6 +204,10 @@ $design_action_url = defined('ICRM_MEMBER_DESIGN_EMBED') && function_exists('icr
     <p class="onoff-builder-admin__alert"><?php echo onoff_builder_escape($deploy_message); ?></p>
     <?php } ?>
 
+    <?php if ($default_project_needs_build) { ?>
+    <p class="onoff-builder-admin__alert">선택한 프로젝트는 빌드가 필요합니다. [iCRM에서 빌드] 또는 dist ZIP 업로드 후 배포하세요.</p>
+    <?php } ?>
+
     <label class="onoff-builder-member__check">
       <input type="checkbox" id="obb-connect-home" value="1" <?php echo $auto_home_default ? 'checked' : ''; ?>>
       적용 후 홈(<code>/</code>)에 이 디자인 연결
@@ -156,7 +216,7 @@ $design_action_url = defined('ICRM_MEMBER_DESIGN_EMBED') && function_exists('icr
     <div class="onoff-builder-admin__form-actions">
       <button type="button" class="onoff-builder-admin__btn onoff-builder-admin__btn--primary" id="obb-publish-apply"
         data-project-id="<?php echo onoff_builder_escape($default_project_id); ?>"
-        <?php echo ($license_ok && $default_project_id !== '' && function_exists('icrm_builder_deploy_publish_and_apply')) ? '' : 'disabled'; ?>>
+        <?php echo ($license_ok && $default_project_id !== '' && !$default_project_needs_build && function_exists('icrm_builder_deploy_publish_and_apply')) ? '' : 'disabled'; ?>>
         배포하고 바로 적용
       </button>
       <?php if ($member_preview_url !== '') { ?>
@@ -170,5 +230,26 @@ $design_action_url = defined('ICRM_MEMBER_DESIGN_EMBED') && function_exists('icr
 
 <script>
 document.body.setAttribute('data-action-url', <?php echo json_encode($design_action_url); ?>);
-(function(){var sel=document.getElementById('obb-project-select');var btn=document.getElementById('obb-publish-apply');if(!sel||!btn)return;sel.disabled=false;sel.addEventListener('change',function(){btn.setAttribute('data-project-id',sel.value);});})();
+(function(){
+  var sel=document.getElementById('obb-project-select');
+  var btn=document.getElementById('obb-publish-apply');
+  var buildBtn=document.getElementById('obb-build-source');
+  if(!sel)return;
+  sel.disabled=false;
+  function syncProject(){
+    var opt=sel.options[sel.selectedIndex];
+    var pid=sel.value||'';
+    var needsBuild=opt&&opt.getAttribute('data-needs-build')==='1';
+    if(btn){
+      btn.setAttribute('data-project-id',pid);
+      btn.disabled=!pid||needsBuild;
+    }
+    if(buildBtn){
+      buildBtn.setAttribute('data-project-id',pid);
+      buildBtn.disabled=!pid||!needsBuild;
+    }
+  }
+  sel.addEventListener('change',syncProject);
+  syncProject();
+})();
 </script>
