@@ -216,7 +216,7 @@ $design_action_url = defined('ICRM_MEMBER_DESIGN_EMBED') && function_exists('icr
     <div class="onoff-builder-admin__form-actions">
       <button type="button" class="onoff-builder-admin__btn onoff-builder-admin__btn--primary" id="obb-publish-apply"
         data-project-id="<?php echo onoff_builder_escape($default_project_id); ?>"
-        <?php echo ($license_ok && $default_project_id !== '' && !$default_project_needs_build && function_exists('icrm_builder_deploy_publish_and_apply')) ? '' : 'disabled'; ?>>
+        <?php echo ($license_ok && $default_project_id !== '' && function_exists('icrm_builder_deploy_publish_and_apply')) ? '' : 'disabled'; ?>>
         배포하고 바로 적용
       </button>
       <?php if ($member_preview_url !== '') { ?>
@@ -242,7 +242,7 @@ document.body.setAttribute('data-action-url', <?php echo json_encode($design_act
     var needsBuild=opt&&opt.getAttribute('data-needs-build')==='1';
     if(btn){
       btn.setAttribute('data-project-id',pid);
-      btn.disabled=!pid||needsBuild;
+      btn.disabled=!pid;
     }
     if(buildBtn){
       buildBtn.setAttribute('data-project-id',pid);

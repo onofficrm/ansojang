@@ -48,11 +48,16 @@
       if (!projectId) {
         return;
       }
-      if (!window.confirm('디자인을 배포하고 사이트에 바로 적용할까요?')) {
+      var sel = document.getElementById('obb-project-select');
+      var opt = sel && sel.options[sel.selectedIndex];
+      var needsBuild = opt && opt.getAttribute('data-needs-build') === '1';
+      if (!window.confirm(needsBuild
+        ? 'iCRM에서 빌드한 뒤 디자인을 배포하고 사이트에 바로 적용할까요? (1~3분 소요될 수 있습니다)'
+        : '디자인을 배포하고 사이트에 바로 적용할까요?')) {
         return;
       }
       publishBtn.disabled = true;
-      showMsg('배포 및 적용 중입니다. 잠시만 기다려 주세요…', 'busy');
+      showMsg(needsBuild ? 'iCRM 빌드 및 배포 중입니다. 잠시만 기다려 주세요…' : '배포 및 적용 중입니다. 잠시만 기다려 주세요…', 'busy');
       var connectHome = document.getElementById('obb-connect-home');
       postAction('publish_apply', {
         project_id: projectId,

@@ -769,6 +769,16 @@ if (!function_exists('icrm_builder_deploy_publish_project')) {
             return array('success' => false, 'message' => '빌드가 필요한 프로젝트입니다. [iCRM에서 빌드]를 실행하거나 dist ZIP을 업로드해 주세요.');
         }
 
+        if (is_array($import) && function_exists('onoff_builder_is_vite_source_project')) {
+            $dir = onoff_builder_project_dir($project_id);
+            if ($dir !== '' && onoff_builder_is_vite_source_project($dir)) {
+                $entry = !empty($import['entry']) ? (string) $import['entry'] : '';
+                if ($entry === '' || $entry === 'index.html') {
+                    return array('success' => false, 'message' => '빌드가 필요한 원본 프로젝트입니다. [iCRM에서 빌드]를 실행하거나 dist ZIP을 업로드해 주세요.');
+                }
+            }
+        }
+
         if ($project_name === '' && is_array($import) && !empty($import['name'])) {
             $project_name = (string) $import['name'];
         }
@@ -834,6 +844,34 @@ if (!function_exists('icrm_builder_deploy_publish_and_apply')) {
      */
     function icrm_builder_deploy_publish_and_apply($project_id, $project_name = '', array $options = array())
     {
+        if (!is_file(G5_PLUGIN_PATH . '/onoff-builder-bridge/bootstrap.php')) {
+            return array('success' => false, 'message' => 'onoff-builder-bridge 플러그인이 없습니다.');
+        }
+        include_once G5_PLUGIN_PATH . '/onoff-builder-bridge/bootstrap.php';
+
+        $import = onoff_builder_get_import($project_id);
+        $needs_build = is_array($import) && !empty($import['needs_build']);
+        if (!$needs_build && is_array($import) && function_exists('onoff_builder_is_vite_source_project')) {
+            $dir = onoff_builder_project_dir($project_id);
+            if ($dir !== '' && onoff_builder_is_vite_source_project($dir)) {
+                $entry = !empty($import['entry']) ? (string) $import['entry'] : '';
+                if ($entry === '' || $entry === 'index.html') {
+                    $needs_build = true;
+                }
+            }
+        }
+
+        if ($needs_build) {
+            if (!function_exists('icrm_builder_deploy_build_source_project')) {
+                return array('success' => false, 'message' => '빌드 모듈이 없습니다.');
+            }
+            $build = icrm_builder_deploy_build_source_project($project_id);
+            if (empty($build['success'])) {
+                $build['message'] = isset($build['message']) ? (string) $build['message'] : 'iCRM 빌드 실패';
+                return $build;
+            }
+        }
+
         $publish = icrm_builder_deploy_publish_project($project_id, $project_name);
         if (empty($publish['success'])) {
             return $publish;

@@ -343,13 +343,26 @@ if (!function_exists('onoff_builder_save_imports')) {
             if ($id === '') {
                 continue;
             }
-            $normalized[] = array(
+
+            $item = array(
                 'id'         => $id,
                 'name'       => isset($row['name']) && $row['name'] !== '' ? $row['name'] : $id,
                 'path'       => isset($row['path']) && $row['path'] !== '' ? $row['path'] : $id,
-                'entry'      => isset($row['entry']) && $row['entry'] !== '' ? $row['entry'] : 'index.html',
                 'created_at' => isset($row['created_at']) && $row['created_at'] !== '' ? $row['created_at'] : date('Y-m-d H:i:s'),
             );
+
+            if (!empty($row['needs_build'])) {
+                $item['needs_build'] = true;
+                $item['entry'] = array_key_exists('entry', $row) ? (string) $row['entry'] : '';
+            } else {
+                $item['entry'] = isset($row['entry']) && $row['entry'] !== '' ? (string) $row['entry'] : 'index.html';
+            }
+
+            if (!empty($row['builder_source'])) {
+                $item['builder_source'] = true;
+            }
+
+            $normalized[] = $item;
         }
 
         $json = json_encode($normalized, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);

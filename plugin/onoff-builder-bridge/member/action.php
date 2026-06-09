@@ -37,10 +37,6 @@ if ($action === 'publish_apply') {
     }
 
     $import = onoff_builder_get_import($project_id);
-    if (is_array($import) && !empty($import['needs_build'])) {
-        echo json_encode(array('ok' => false, 'error' => '빌드가 필요한 프로젝트입니다. [iCRM에서 빌드]를 실행하거나 dist ZIP을 업로드해 주세요.'), JSON_UNESCAPED_UNICODE);
-        exit;
-    }
     $project_name = is_array($import) && !empty($import['name']) ? (string) $import['name'] : $project_id;
     $connect_home = !empty($_POST['connect_home']);
 
