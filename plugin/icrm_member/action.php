@@ -53,13 +53,13 @@ if (in_array($action, $member_portal_retired_actions, true)) {
 }
 
 if ($action === 'platform_skin_status') {
-    icrm_member_require('design');
+    icrm_member_require_json('design');
     echo json_encode(array('ok' => true, 'status' => onoff_platform_skin_get_status()), JSON_UNESCAPED_UNICODE);
     exit;
 }
 
 if ($action === 'platform_skin_apply') {
-    icrm_member_require('design');
+    icrm_member_require_json('design');
     $result = onoff_platform_skin_apply(array('apply_boards' => true));
     echo json_encode(array(
         'ok'     => !empty($result['success']),
@@ -119,7 +119,7 @@ if ($action === 'board_connect') {
 }
 
 if (in_array($action, array('publish_apply', 'builder_pull', 'builder_rollback', 'builder_status'), true)) {
-    icrm_member_require('design');
+    icrm_member_require_json('design');
     if ($action === 'builder_status') {
         echo json_encode(array('ok' => true, 'status' => icrm_builder_deploy_check_status()), JSON_UNESCAPED_UNICODE);
         exit;

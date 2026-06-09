@@ -242,6 +242,51 @@ if (!function_exists('icrm_member_denied_exit')) {
     }
 }
 
+if (!function_exists('icrm_member_json_exit')) {
+    function icrm_member_json_exit($ok, $error = '', $extra = array())
+    {
+        if (!headers_sent()) {
+            header('Content-Type: application/json; charset=utf-8');
+        }
+
+        $payload = array('ok' => (bool) $ok);
+        if ($error !== '') {
+            $payload['error'] = (string) $error;
+        }
+        if (is_array($extra) && $extra !== array()) {
+            $payload = array_merge($payload, $extra);
+        }
+
+        echo json_encode($payload, JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+}
+
+if (!function_exists('icrm_member_require_json')) {
+    /**
+     * action.php 등 AJAX — HTML 리다이렉트 대신 JSON 반환
+     */
+    function icrm_member_require_json($module = 'home')
+    {
+        global $is_member;
+
+        if (icrm_member_can_module($module)) {
+            return;
+        }
+
+        if (empty($is_member)) {
+            icrm_member_json_exit(false, '로그인이 필요합니다. 페이지를 새로고침한 뒤 다시 로그인해 주세요.');
+        }
+
+        $msg = icrm_member_module_lock_reason($module);
+        if ($msg === '이용 권한이 없습니다.') {
+            $msg = '이 메뉴를 사용할 권한이 없습니다.';
+        }
+
+        icrm_member_json_exit(false, $msg);
+    }
+}
+
 if (!function_exists('icrm_member_require')) {
     function icrm_member_require($module = 'home')
     {

@@ -27,8 +27,16 @@
     return fetch(actionUrl, {
       method: 'POST',
       credentials: 'same-origin',
+      redirect: 'manual',
       body: fd,
     }).then(function (r) {
+      if (r.type === 'opaqueredirect' || r.status === 301 || r.status === 302) {
+        throw new Error('로그인이 필요합니다. 페이지를 새로고침한 뒤 다시 로그인해 주세요.');
+      }
+      var ct = (r.headers.get('content-type') || '').toLowerCase();
+      if (ct.indexOf('json') === -1) {
+        throw new Error('서버 응답 오류입니다. 잠시 후 다시 시도해 주세요.');
+      }
       return r.json();
     });
   }

@@ -88,7 +88,9 @@ if (!function_exists('onoff_builder_require_deploy_user')) {
         }
 
         if (empty($is_member)) {
-            $back = onoff_builder_member_url();
+            $back = function_exists('onoff_builder_member_portal_url')
+                ? onoff_builder_member_portal_url()
+                : onoff_builder_member_url();
             $login = defined('G5_BBS_URL') ? G5_BBS_URL . '/login.php' : '/bbs/login.php';
             $login .= '?url=' . urlencode($back);
             if (function_exists('goto_url')) {
@@ -96,6 +98,10 @@ if (!function_exists('onoff_builder_require_deploy_user')) {
             }
             header('Location: ' . $login);
             exit;
+        }
+
+        if (function_exists('onoff_builder_member_portal_redirect')) {
+            onoff_builder_member_portal_redirect('홈페이지 디자인 배포 권한이 없습니다. 사이트 관리자에게 문의하세요.');
         }
 
         if ($redirect === '') {
@@ -115,10 +121,49 @@ if (!function_exists('onoff_builder_member_url')) {
     }
 }
 
+if (!function_exists('onoff_builder_member_portal_url')) {
+    /**
+     * iCRM 회원 포털 디자인 탭 URL (없으면 standalone member URL)
+     */
+    function onoff_builder_member_portal_url($msg = '')
+    {
+        if (function_exists('icrm_member_enabled') && icrm_member_enabled() && is_file(G5_PLUGIN_PATH . '/icrm_member/index.php')) {
+            if (is_file(G5_LIB_PATH . '/icrm-member.lib.php')) {
+                include_once G5_LIB_PATH . '/icrm-member.lib.php';
+            }
+            if (function_exists('icrm_member_url')) {
+                $url = icrm_member_url('design');
+                if ($msg !== '') {
+                    $url .= (strpos($url, '?') !== false ? '&' : '?') . 'msg=' . urlencode($msg);
+                }
+
+                return $url;
+            }
+        }
+
+        return onoff_builder_member_url($msg !== '' ? '?msg=' . urlencode($msg) : '');
+    }
+}
+
+if (!function_exists('onoff_builder_member_portal_redirect')) {
+    function onoff_builder_member_portal_redirect($msg)
+    {
+        $url = onoff_builder_member_portal_url($msg);
+        if (function_exists('goto_url')) {
+            goto_url($url);
+        }
+        header('Location: ' . $url);
+        exit;
+    }
+}
+
 if (!function_exists('onoff_builder_require_post')) {
     function onoff_builder_require_post()
     {
         if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+            if (function_exists('onoff_builder_member_portal_redirect')) {
+                onoff_builder_member_portal_redirect('잘못된 요청입니다.');
+            }
             onoff_builder_alert('잘못된 요청입니다.');
         }
     }
