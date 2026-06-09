@@ -44,5 +44,9 @@ if (!onoff_builder_add_import(array(
     onoff_builder_member_portal_redirect('프로젝트 정보 저장에 실패했습니다.');
 }
 
+if (function_exists('onoff_builder_sync_import_build_flags')) {
+    onoff_builder_sync_import_build_flags($id);
+}
+
 $msg = isset($result['message']) ? $result['message'] : '업로드가 완료되었습니다. 아래 [배포하고 바로 적용]을 눌러 주세요.';
 onoff_builder_member_portal_redirect($msg);

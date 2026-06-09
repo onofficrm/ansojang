@@ -850,16 +850,7 @@ if (!function_exists('icrm_builder_deploy_publish_and_apply')) {
         include_once G5_PLUGIN_PATH . '/onoff-builder-bridge/bootstrap.php';
 
         $import = onoff_builder_get_import($project_id);
-        $needs_build = is_array($import) && !empty($import['needs_build']);
-        if (!$needs_build && is_array($import) && function_exists('onoff_builder_is_vite_source_project')) {
-            $dir = onoff_builder_project_dir($project_id);
-            if ($dir !== '' && onoff_builder_is_vite_source_project($dir)) {
-                $entry = !empty($import['entry']) ? (string) $import['entry'] : '';
-                if ($entry === '' || $entry === 'index.html') {
-                    $needs_build = true;
-                }
-            }
-        }
+        $needs_build = onoff_builder_project_needs_build($project_id, is_array($import) ? $import : array());
 
         if ($needs_build) {
             if (!function_exists('icrm_builder_deploy_build_source_project')) {
@@ -925,8 +916,10 @@ if (!function_exists('icrm_builder_deploy_build_source_project')) {
         }
 
         $project_id = onoff_builder_sanitize_project_id($project_id);
+        onoff_builder_sync_import_build_flags($project_id);
         $import = onoff_builder_get_import($project_id);
-        if (!is_array($import) || empty($import['needs_build'])) {
+
+        if (!onoff_builder_project_needs_build($project_id, is_array($import) ? $import : array())) {
             return array('success' => false, 'message' => '빌드가 필요한 원본 프로젝트가 아닙니다.');
         }
 

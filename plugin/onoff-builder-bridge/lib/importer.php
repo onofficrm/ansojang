@@ -137,6 +137,76 @@ if (!function_exists('onoff_builder_vite_source_message')) {
     }
 }
 
+if (!function_exists('onoff_builder_project_needs_build')) {
+    /**
+     * imports 메타 + 디스크 상태로 빌드 필요 여부 판단
+     */
+    function onoff_builder_project_needs_build($project_id, array $import = null)
+    {
+        if (!onoff_builder_validate_project_id($project_id)) {
+            return false;
+        }
+
+        $project_id = onoff_builder_sanitize_project_id($project_id);
+        if (!is_array($import)) {
+            $import = onoff_builder_get_import($project_id);
+        }
+
+        if (is_array($import) && !empty($import['needs_build'])) {
+            return true;
+        }
+
+        $dir = onoff_builder_project_dir($project_id);
+        if ($dir === '' || !is_dir($dir) || !onoff_builder_is_vite_source_project($dir)) {
+            return false;
+        }
+
+        if (is_file($dir . '/dist/index.html')) {
+            return false;
+        }
+
+        $entry = is_array($import) && array_key_exists('entry', $import)
+            ? (string) $import['entry']
+            : 'index.html';
+
+        return ($entry === '' || $entry === 'index.html');
+    }
+}
+
+if (!function_exists('onoff_builder_sync_import_build_flags')) {
+    /**
+     * 디스크 상태와 imports.json needs_build 불일치 시 메타 보정
+     */
+    function onoff_builder_sync_import_build_flags($project_id)
+    {
+        if (!onoff_builder_validate_project_id($project_id)) {
+            return false;
+        }
+
+        $project_id = onoff_builder_sanitize_project_id($project_id);
+        $import = onoff_builder_get_import($project_id);
+        if (!is_array($import)) {
+            return false;
+        }
+
+        $needs = onoff_builder_project_needs_build($project_id, $import);
+        $has_flag = !empty($import['needs_build']);
+
+        if ($needs === $has_flag) {
+            return true;
+        }
+
+        return onoff_builder_add_import(array(
+            'id'             => $project_id,
+            'name'           => isset($import['name']) ? (string) $import['name'] : $project_id,
+            'path'           => isset($import['path']) ? (string) $import['path'] : $project_id,
+            'entry'          => $needs ? '' : (isset($import['entry']) ? (string) $import['entry'] : 'index.html'),
+            'needs_build'    => $needs,
+            'builder_source' => $needs || !empty($import['builder_source']),
+        ));
+    }
+}
+
 if (!function_exists('onoff_builder_move_dir_contents')) {
     function onoff_builder_move_dir_contents($from, $to)
     {

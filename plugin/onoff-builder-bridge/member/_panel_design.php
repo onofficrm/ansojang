@@ -25,14 +25,14 @@ if ($default_project_id !== '' && onoff_builder_project_exists($default_project_
 }
 
 $default_project_needs_build = false;
-if ($default_project_id !== '') {
-    $default_import = onoff_builder_get_import($default_project_id);
-    $default_project_needs_build = is_array($default_import) && !empty($default_import['needs_build']);
+if ($default_project_id !== '' && function_exists('onoff_builder_project_needs_build')) {
+    $default_project_needs_build = onoff_builder_project_needs_build($default_project_id);
 }
 
 $needs_build_projects = array();
 foreach ($projects as $proj) {
-    if (!empty($proj['needs_build'])) {
+    $pid = isset($proj['id']) ? (string) $proj['id'] : '';
+    if ($pid !== '' && function_exists('onoff_builder_project_needs_build') && onoff_builder_project_needs_build($pid, $proj)) {
         $needs_build_projects[] = $proj;
     }
 }
@@ -182,9 +182,10 @@ $design_action_url = defined('ICRM_MEMBER_DESIGN_EMBED') && function_exists('icr
             $pid = isset($p['id']) ? $p['id'] : '';
             $pname = isset($p['name']) ? $p['name'] : $pid;
             $selected = ($pid === $default_project_id) ? ' selected' : '';
-            $needs_build = !empty($p['needs_build']) ? ' data-needs-build="1"' : '';
+            $needs_build = function_exists('onoff_builder_project_needs_build')
+                && onoff_builder_project_needs_build($pid, $p) ? ' data-needs-build="1"' : '';
             ?>
-        <option value="<?php echo onoff_builder_escape($pid); ?>"<?php echo $selected . $needs_build; ?>><?php echo onoff_builder_escape($pname); ?><?php echo !empty($p['needs_build']) ? ' (빌드 필요)' : ''; ?> (<?php echo onoff_builder_escape($pid); ?>)</option>
+        <option value="<?php echo onoff_builder_escape($pid); ?>"<?php echo $selected . $needs_build; ?>><?php echo onoff_builder_escape($pname); ?><?php echo $needs_build !== '' ? ' (빌드 필요)' : ''; ?> (<?php echo onoff_builder_escape($pid); ?>)</option>
         <?php } ?>
       </select>
     </div>
