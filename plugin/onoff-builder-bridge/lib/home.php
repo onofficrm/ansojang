@@ -6,11 +6,17 @@ if (!defined('_GNUBOARD_')) {
 if (!function_exists('onoff_builder_get_home_bridge_id')) {
     function onoff_builder_get_home_bridge_id()
     {
-        if (!function_exists('g5site_cfg')) {
-            return '';
+        $id = '';
+        if (function_exists('g5site_cfg')) {
+            $id = onoff_builder_sanitize_project_id(g5site_cfg('home_builder_bridge_id', ''));
         }
 
-        $id = onoff_builder_sanitize_project_id(g5site_cfg('home_builder_bridge_id', ''));
+        if ($id === '' && function_exists('onoff_builder_read_runtime_config')) {
+            $runtime = onoff_builder_read_runtime_config();
+            $id = isset($runtime['home_builder_bridge_id'])
+                ? onoff_builder_sanitize_project_id($runtime['home_builder_bridge_id'])
+                : '';
+        }
 
         return $id;
     }

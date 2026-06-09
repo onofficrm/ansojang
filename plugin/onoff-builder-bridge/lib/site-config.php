@@ -10,6 +10,51 @@ if (!function_exists('onoff_builder_site_config_path')) {
     }
 }
 
+if (!function_exists('onoff_builder_runtime_config_path')) {
+    function onoff_builder_runtime_config_path()
+    {
+        return defined('ONOFF_BUILDER_DATA_PATH') ? ONOFF_BUILDER_DATA_PATH . '/runtime-config.json' : '';
+    }
+}
+
+if (!function_exists('onoff_builder_read_runtime_config')) {
+    function onoff_builder_read_runtime_config()
+    {
+        $path = onoff_builder_runtime_config_path();
+        if ($path === '' || !is_file($path)) {
+            return array();
+        }
+
+        $json = file_get_contents($path);
+        $data = json_decode((string) $json, true);
+
+        return is_array($data) ? $data : array();
+    }
+}
+
+if (!function_exists('onoff_builder_set_runtime_config_key')) {
+    function onoff_builder_set_runtime_config_key($key, $value)
+    {
+        $path = onoff_builder_runtime_config_path();
+        if ($path === '') {
+            return false;
+        }
+        if (!is_dir(dirname($path)) && !@mkdir(dirname($path), 0755, true)) {
+            return false;
+        }
+
+        $key = preg_replace('/[^a-z0-9_]/', '', (string) $key);
+        if ($key === '') {
+            return false;
+        }
+
+        $data = onoff_builder_read_runtime_config();
+        $data[$key] = (string) $value;
+
+        return file_put_contents($path, json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), LOCK_EX) !== false;
+    }
+}
+
 if (!function_exists('onoff_builder_set_site_config_key')) {
     /**
      * _site.config.php 의 $site_config 키 값 갱신
@@ -72,6 +117,10 @@ if (!function_exists('onoff_builder_set_home_bridge_id')) {
             return false;
         }
 
-        return onoff_builder_set_site_config_key('home_builder_bridge_id', $project_id);
+        if (onoff_builder_set_site_config_key('home_builder_bridge_id', $project_id)) {
+            return true;
+        }
+
+        return onoff_builder_set_runtime_config_key('home_builder_bridge_id', $project_id);
     }
 }

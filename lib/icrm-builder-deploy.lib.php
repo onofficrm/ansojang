@@ -883,7 +883,14 @@ if (!function_exists('icrm_builder_deploy_publish_and_apply')) {
         if (!empty($options['connect_home']) && is_file(G5_PLUGIN_PATH . '/onoff-builder-bridge/lib/site-config.php')) {
             include_once G5_PLUGIN_PATH . '/onoff-builder-bridge/lib/site-config.php';
             if (function_exists('onoff_builder_set_home_bridge_id')) {
-                onoff_builder_set_home_bridge_id($project_id);
+                if (!onoff_builder_set_home_bridge_id($project_id)) {
+                    return array(
+                        'success' => false,
+                        'message' => '디자인은 적용됐지만 홈 연결 설정 저장에 실패했습니다. data 폴더 쓰기 권한을 확인해 주세요.',
+                        'published' => true,
+                        'published_release_id' => isset($publish['release_id']) ? (string) $publish['release_id'] : '',
+                    );
+                }
             }
         }
 
