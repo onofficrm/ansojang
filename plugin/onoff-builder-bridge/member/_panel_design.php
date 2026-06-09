@@ -101,8 +101,8 @@ $design_action_url = defined('ICRM_MEMBER_DESIGN_EMBED') && function_exists('icr
 
 <div class="onoff-builder-member__steps">
   <section class="onoff-builder-member__step">
-    <h2>1. 빌더 ZIP 업로드</h2>
-    <p>빌더에서 다운받은 ZIP을 그대로 올리세요. dist가 포함되어 있으면 바로 배포할 수 있고, 원본만 있으면 아래 빌드 단계로 진행합니다.</p>
+    <h2>1. 빌더 ZIP 업로드 및 자동 적용</h2>
+    <p>빌더에서 다운받은 ZIP을 그대로 올리세요. 원본만 포함된 경우에도 iCRM에서 자동 빌드한 뒤 사이트 홈에 바로 적용합니다.</p>
     <?php if (!$zip_ok) { ?>
     <p class="onoff-builder-admin__alert">서버에 ZipArchive가 없어 업로드를 사용할 수 없습니다.</p>
     <?php } else { ?>
@@ -119,8 +119,12 @@ $design_action_url = defined('ICRM_MEMBER_DESIGN_EMBED') && function_exists('icr
         <label for="zip_file">빌더 ZIP</label>
         <input type="file" name="zip_file" id="zip_file" accept=".zip,application/zip" required>
       </div>
+      <label class="onoff-builder-member__check">
+        <input type="checkbox" name="connect_home" value="1" <?php echo $auto_home_default ? 'checked' : ''; ?>>
+        업로드 후 홈(<code>/</code>)에 바로 연결
+      </label>
       <div class="onoff-builder-admin__form-actions">
-        <button type="submit" class="onoff-builder-admin__btn onoff-builder-admin__btn--primary">ZIP 업로드</button>
+        <button type="submit" class="onoff-builder-admin__btn onoff-builder-admin__btn--primary">ZIP 업로드하고 바로 적용</button>
       </div>
     </form>
     <?php } ?>

@@ -49,4 +49,28 @@ if (function_exists('onoff_builder_sync_import_build_flags')) {
 }
 
 $msg = isset($result['message']) ? $result['message'] : '업로드가 완료되었습니다. 아래 [배포하고 바로 적용]을 눌러 주세요.';
+if (empty($_POST['skip_auto_publish'])) {
+    @set_time_limit(600);
+    @ini_set('memory_limit', '256M');
+
+    if (is_file(G5_LIB_PATH . '/icrm-builder-deploy.lib.php')) {
+        include_once G5_LIB_PATH . '/icrm-builder-deploy.lib.php';
+    }
+
+    if (function_exists('icrm_builder_deploy_publish_and_apply')) {
+        $deploy = icrm_builder_deploy_publish_and_apply($id, $result['project_name'], array(
+            'connect_home' => !isset($_POST['connect_home']) || !empty($_POST['connect_home']),
+        ));
+
+        if (!empty($deploy['success'])) {
+            $msg = isset($deploy['message']) ? (string) $deploy['message'] : '디자인 배포 및 적용이 완료되었습니다.';
+        } else {
+            $detail = isset($deploy['message']) ? (string) $deploy['message'] : '원인을 확인할 수 없습니다.';
+            $msg .= ' 자동 배포 실패: ' . $detail;
+        }
+    } else {
+        $msg .= ' 자동 배포 실패: 배포 모듈을 찾을 수 없습니다.';
+    }
+}
+
 onoff_builder_member_portal_redirect($msg);

@@ -849,6 +849,10 @@ if (!function_exists('icrm_builder_deploy_publish_and_apply')) {
         }
         include_once G5_PLUGIN_PATH . '/onoff-builder-bridge/bootstrap.php';
 
+        if (function_exists('onoff_builder_sync_import_build_flags')) {
+            onoff_builder_sync_import_build_flags($project_id);
+        }
+
         $import = onoff_builder_get_import($project_id);
         $needs_build = onoff_builder_project_needs_build($project_id, is_array($import) ? $import : array());
 
