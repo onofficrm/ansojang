@@ -343,7 +343,6 @@ if (!function_exists('onoff_builder_save_imports')) {
             if ($id === '') {
                 continue;
             }
-
             $item = array(
                 'id'         => $id,
                 'name'       => isset($row['name']) && $row['name'] !== '' ? $row['name'] : $id,
@@ -756,7 +755,16 @@ if (!function_exists('onoff_builder_render_import_page')) {
             onoff_builder_render_page_error('등록되지 않은 프로젝트입니다. 관리자 화면에서 업로드 여부를 확인해 주세요.');
         }
 
-        $entry = isset($meta['entry']) && $meta['entry'] !== '' ? $meta['entry'] : 'index.html';
+        $entry = function_exists('onoff_builder_resolve_import_entry')
+            ? onoff_builder_resolve_import_entry($id, $meta)
+            : (isset($meta['entry']) && $meta['entry'] !== '' ? $meta['entry'] : 'index.html');
+        if ($entry === '') {
+            $message = function_exists('onoff_builder_vite_source_message')
+                ? onoff_builder_vite_source_message()
+                : '빌드가 필요한 프로젝트입니다. 디자인 화면에서 [배포하고 바로 적용]을 실행해 주세요.';
+            onoff_builder_render_page_error($message);
+        }
+
         $index_file = onoff_builder_resolve_import_index_file($id, $entry);
         if ($index_file === '') {
             onoff_builder_render_page_error('index.html 파일을 찾을 수 없습니다. ZIP을 다시 업로드해 주세요.');
@@ -765,6 +773,10 @@ if (!function_exists('onoff_builder_render_import_page')) {
         $html = @file_get_contents($index_file);
         if ($html === false || $html === '') {
             onoff_builder_render_page_error('HTML 파일을 읽을 수 없습니다.');
+        }
+
+        if (function_exists('onoff_builder_is_vite_dev_index_html') && onoff_builder_is_vite_dev_index_html($html)) {
+            onoff_builder_render_page_error(onoff_builder_vite_source_message());
         }
 
         $html = onoff_builder_remove_base_tags($html);

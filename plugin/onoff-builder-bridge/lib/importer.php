@@ -133,7 +133,85 @@ if (!function_exists('onoff_builder_is_vite_source_project')) {
 if (!function_exists('onoff_builder_vite_source_message')) {
     function onoff_builder_vite_source_message()
     {
-        return "빌더 원본 프로젝트입니다. 아래 [iCRM에서 빌드]를 실행하거나, dist ZIP을 별도로 업로드해 주세요.";
+        return '빌더 원본 프로젝트입니다. 디자인 화면에서 [iCRM에서 빌드] 또는 [배포하고 바로 적용]을 실행해 주세요.';
+    }
+}
+
+if (!function_exists('onoff_builder_is_vite_dev_index_html')) {
+    function onoff_builder_is_vite_dev_index_html($html)
+    {
+        if (!is_string($html) || $html === '') {
+            return false;
+        }
+
+        return (bool) preg_match('#\ssrc=(["\'])/src/#', $html);
+    }
+}
+
+if (!function_exists('onoff_builder_resolve_import_entry')) {
+    /**
+     * imports 메타·디스크 상태로 실제 렌더할 entry 경로 결정
+     *
+     * @return string 빈 문자열이면 렌더 불가(빌드 필요 등)
+     */
+    function onoff_builder_resolve_import_entry($project_id, array $meta = null)
+    {
+        if (!onoff_builder_validate_project_id($project_id)) {
+            return '';
+        }
+
+        $project_id = onoff_builder_sanitize_project_id($project_id);
+        if (!is_array($meta)) {
+            $meta = onoff_builder_get_import($project_id);
+        }
+        if (!is_array($meta)) {
+            return '';
+        }
+
+        if (function_exists('onoff_builder_sync_import_build_flags')) {
+            onoff_builder_sync_import_build_flags($project_id);
+            $meta = onoff_builder_get_import($project_id);
+        }
+
+        if (function_exists('onoff_builder_project_needs_build')
+            && onoff_builder_project_needs_build($project_id, $meta)) {
+            return '';
+        }
+
+        $entry = isset($meta['entry']) && $meta['entry'] !== '' ? (string) $meta['entry'] : 'index.html';
+        $dir = onoff_builder_project_dir($project_id);
+        if ($dir === '' || !is_dir($dir)) {
+            return '';
+        }
+
+        if ($entry === 'index.html' && is_file($dir . '/dist/index.html')) {
+            $root_html = @file_get_contents($dir . '/index.html');
+            if ($root_html !== false && onoff_builder_is_vite_dev_index_html($root_html)) {
+                return 'dist/index.html';
+            }
+        }
+
+        if (onoff_builder_resolve_import_index_file($project_id, $entry) === '') {
+            if ($entry !== 'dist/index.html' && is_file($dir . '/dist/index.html')) {
+                return 'dist/index.html';
+            }
+
+            return '';
+        }
+
+        $index_file = onoff_builder_resolve_import_index_file($project_id, $entry);
+        if ($index_file !== '') {
+            $html = @file_get_contents($index_file);
+            if ($html !== false && onoff_builder_is_vite_dev_index_html($html)) {
+                if (is_file($dir . '/dist/index.html')) {
+                    return 'dist/index.html';
+                }
+
+                return '';
+            }
+        }
+
+        return $entry;
     }
 }
 
