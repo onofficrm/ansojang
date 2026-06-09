@@ -12,7 +12,7 @@ $ps = function_exists('onoff_platform_skin_get_status') ? onoff_platform_skin_ge
     'member_applied' => false,
 );
 $can_apply = function_exists('onoff_platform_skin_can_apply') && onoff_platform_skin_can_apply();
-$action_url = icrm_member_url('action.php');
+$action_url = icrm_member_action_url();
 ?>
 <section class="onoff-builder-member__step icrm-platform-skin-panel" id="icrm-platform-skin" style="margin-top:24px">
   <h2>3. 플랫폼 스킨</h2>

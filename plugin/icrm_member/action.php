@@ -125,6 +125,8 @@ if (in_array($action, array('publish_apply', 'builder_pull', 'builder_rollback',
         exit;
     }
     if ($action === 'publish_apply') {
+        @set_time_limit(600);
+        @ini_set('memory_limit', '256M');
         $project_id = isset($_POST['project_id']) ? $_POST['project_id'] : '';
         if (!onoff_builder_validate_project_id($project_id) || !onoff_builder_project_exists($project_id)) {
             echo json_encode(array('ok' => false, 'error' => '프로젝트를 찾을 수 없습니다.'), JSON_UNESCAPED_UNICODE);

@@ -78,8 +78,8 @@ $upload_action = defined('ICRM_MEMBER_DESIGN_EMBED')
     ? G5_PLUGIN_URL . '/onoff-builder-bridge/member/upload_update.php'
     : onoff_builder_member_url('upload_update.php');
 
-$design_action_url = defined('ICRM_MEMBER_DESIGN_EMBED') && function_exists('icrm_member_url')
-    ? icrm_member_url('action.php')
+$design_action_url = defined('ICRM_MEMBER_DESIGN_EMBED') && function_exists('icrm_member_action_url')
+    ? icrm_member_action_url()
     : onoff_builder_member_url('action.php');
 ?>
 

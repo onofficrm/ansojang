@@ -20,5 +20,5 @@ include __DIR__ . '/_panel_platform_skin.php';
 <link rel="stylesheet" href="<?php echo icrm_member_h(G5_PLUGIN_URL . '/onoff-builder-bridge/assets/css/member.css'); ?>">
 <script src="<?php echo icrm_member_h(G5_PLUGIN_URL . '/onoff-builder-bridge/assets/js/member.js'); ?>"></script>
 <script>
-document.body.setAttribute('data-action-url', <?php echo json_encode(icrm_member_url('action.php')); ?>);
+document.body.setAttribute('data-action-url', <?php echo json_encode(function_exists('icrm_member_action_url') ? icrm_member_action_url() : G5_PLUGIN_URL . '/icrm_member/action.php'); ?>);
 </script>

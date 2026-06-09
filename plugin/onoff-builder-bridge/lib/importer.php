@@ -235,6 +235,24 @@ if (!function_exists('onoff_builder_normalize_uploaded_project')) {
             }
         }
 
+        if (onoff_builder_is_vite_source_project($project_dir)) {
+            if (is_file($project_dir . '/dist/index.html')) {
+                return array(
+                    'status'         => 'ready',
+                    'entry'          => 'dist/index.html',
+                    'needs_build'    => false,
+                    'builder_source' => true,
+                );
+            }
+
+            return array(
+                'status'         => 'needs_build',
+                'entry'          => '',
+                'needs_build'    => true,
+                'builder_source' => true,
+            );
+        }
+
         $entry = onoff_builder_find_index_html($project_dir);
         if ($entry !== '') {
             return array(

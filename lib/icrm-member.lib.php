@@ -341,6 +341,15 @@ if (!function_exists('icrm_member_url')) {
     }
 }
 
+if (!function_exists('icrm_member_action_url')) {
+    function icrm_member_action_url()
+    {
+        return defined('G5_PLUGIN_URL')
+            ? G5_PLUGIN_URL . '/icrm_member/action.php'
+            : '/plugin/icrm_member/action.php';
+    }
+}
+
 if (!function_exists('icrm_member_modules')) {
     function icrm_member_modules()
     {
