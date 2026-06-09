@@ -206,7 +206,7 @@ $design_action_url = defined('ICRM_MEMBER_DESIGN_EMBED') && function_exists('icr
     <?php } ?>
 
     <?php if ($default_project_needs_build) { ?>
-    <p class="onoff-builder-admin__alert">선택한 프로젝트는 빌드가 필요합니다. [iCRM에서 빌드] 또는 dist ZIP 업로드 후 배포하세요.</p>
+    <p class="onoff-builder-admin__alert">원본 프로젝트입니다. <strong>배포하고 바로 적용</strong>을 누르면 iCRM에서 자동 빌드 후 배포됩니다. (1~3분) 또는 [iCRM에서 빌드] · dist ZIP 업로드를 사용할 수도 있습니다.</p>
     <?php } ?>
 
     <label class="onoff-builder-member__check">
