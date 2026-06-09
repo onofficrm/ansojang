@@ -29,6 +29,7 @@ header('Content-Type: text/html; charset=utf-8');
       <a href="<?php echo onoff_builder_escape(onoff_builder_admin_url()); ?>">홈</a>
       <a href="<?php echo onoff_builder_escape(onoff_builder_admin_url('upload.php')); ?>">업로드</a>
       <a class="is-active" href="<?php echo onoff_builder_escape(onoff_builder_admin_url('list.php')); ?>">목록</a>
+      <a href="<?php echo onoff_builder_escape(onoff_builder_admin_url('home-settings.php')); ?>">홈 연결</a>
     </nav>
   </div>
 </header>
@@ -88,6 +89,7 @@ header('Content-Type: text/html; charset=utf-8');
             </td>
             <td><?php echo onoff_builder_escape(isset($p['created_at']) ? $p['created_at'] : '—'); ?></td>
             <td>
+              <a class="onoff-builder-admin__btn" href="<?php echo onoff_builder_escape(onoff_builder_admin_url('deploy.php?project_id=' . urlencode($pid))); ?>">iCRM 배포</a>
               <form method="post"
                 action="<?php echo onoff_builder_escape(onoff_builder_admin_url('delete.php')); ?>"
                 class="onoff-builder-admin__inline-form js-onoff-builder-delete-form"

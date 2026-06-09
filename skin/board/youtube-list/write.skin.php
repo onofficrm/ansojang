@@ -84,7 +84,14 @@ $yt_summary = isset($wr_2) ? get_text($wr_2) : '';
     </div>
     <?php } ?>
 
-    <div class="board-write-form__row bo_w_tit write_div">
+        <?php
+    $g5b_ai_write_inc = dirname(__FILE__) . '/../_inc/g5b-seo-ai-write-tools.php';
+    if (is_file($g5b_ai_write_inc)) {
+        include_once $g5b_ai_write_inc;
+    }
+    ?>
+
+<div class="board-write-form__row bo_w_tit write_div">
         <label for="wr_subject" class="board-write-form__label">제목<strong class="required">필수</strong></label>
         <input type="text" name="wr_subject" value="<?php echo $subject ?>" id="wr_subject" required class="frm_input full_input required" maxlength="255" placeholder="영상 제목을 입력하세요">
     </div>
@@ -138,6 +145,13 @@ $yt_summary = isset($wr_2) ? get_text($wr_2) : '';
     <?php if ($is_use_captcha) { ?>
     <div class="board-write-form__row write_div board-write-form__captcha"><?php echo $captcha_html ?></div>
     <?php } ?>
+
+    <?php
+    $g5b_seo_write_inc = dirname(__FILE__) . '/../_inc/g5b-seo-write-fields.php';
+    if (is_file($g5b_seo_write_inc)) {
+        include_once $g5b_seo_write_inc;
+    }
+    ?>
 
     <div class="btn_confirm write_div board-write-form__submit">
         <a href="<?php echo get_pretty_url($bo_table); ?>" class="btn_cancel btn">취소</a>

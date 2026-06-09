@@ -27,6 +27,94 @@ if (!function_exists('onoff_builder_require_admin')) {
     }
 }
 
+if (!function_exists('onoff_builder_member_deploy_enabled')) {
+    function onoff_builder_member_deploy_enabled()
+    {
+        if (function_exists('g5site_cfg_bool')) {
+            return g5site_cfg_bool('builder_deploy_member_enabled', true);
+        }
+
+        return true;
+    }
+}
+
+if (!function_exists('onoff_builder_member_deploy_min_level')) {
+    function onoff_builder_member_deploy_min_level()
+    {
+        if (function_exists('g5site_cfg')) {
+            $lv = g5site_cfg('builder_deploy_min_level', '2');
+            if ($lv !== '' && is_numeric($lv)) {
+                return max(1, (int) $lv);
+            }
+        }
+
+        return 2;
+    }
+}
+
+if (!function_exists('onoff_builder_is_deploy_user')) {
+    /**
+     * 홈페이지 디자인 배포 권한 (최고관리자 또는 일반회원)
+     */
+    function onoff_builder_is_deploy_user()
+    {
+        global $is_admin, $is_member, $member;
+
+        if ($is_admin === 'super') {
+            return true;
+        }
+
+        if (!onoff_builder_member_deploy_enabled()) {
+            return false;
+        }
+
+        if (empty($is_member) || empty($member['mb_id'])) {
+            return false;
+        }
+
+        $level = isset($member['mb_level']) ? (int) $member['mb_level'] : 0;
+
+        return $level >= onoff_builder_member_deploy_min_level();
+    }
+}
+
+if (!function_exists('onoff_builder_require_deploy_user')) {
+    function onoff_builder_require_deploy_user($redirect = '')
+    {
+        global $is_member;
+
+        if (onoff_builder_is_deploy_user()) {
+            return;
+        }
+
+        if (empty($is_member)) {
+            $back = onoff_builder_member_url();
+            $login = defined('G5_BBS_URL') ? G5_BBS_URL . '/login.php' : '/bbs/login.php';
+            $login .= '?url=' . urlencode($back);
+            if (function_exists('goto_url')) {
+                goto_url($login);
+            }
+            header('Location: ' . $login);
+            exit;
+        }
+
+        if ($redirect === '') {
+            $redirect = defined('G5_URL') ? G5_URL : '/';
+        }
+
+        onoff_builder_alert('홈페이지 디자인 배포 권한이 없습니다. 사이트 관리자에게 문의하세요.', $redirect);
+    }
+}
+
+if (!function_exists('onoff_builder_member_url')) {
+    function onoff_builder_member_url($file = '')
+    {
+        $file = ltrim((string) $file, '/');
+
+        return ONOFF_BUILDER_URL . '/member/' . $file;
+    }
+}
+
 if (!function_exists('onoff_builder_require_post')) {
     function onoff_builder_require_post()
     {

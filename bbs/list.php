@@ -307,6 +307,7 @@ if (preg_match("/gecko|firefox/i", $_SERVER['HTTP_USER_AGENT'])) {
 $rss_href = '';
 if ($board['bo_use_rss_view']) {
     $rss_href = G5_BBS_URL.'/rss.php?bo_table='.$bo_table;
+    $rss_href = run_replace('get_list_rss_url', $rss_href, $board, $bo_table);
 }
 
 $stx = get_text(stripslashes($stx));

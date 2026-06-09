@@ -146,6 +146,123 @@ if (!function_exists('g5b_seo_view_breadcrumb_items')) {
     }
 }
 
+if (!function_exists('g5b_seo_view_get_post_faq_items')) {
+    /**
+     * SEO 메타 FAQ (화면·JSON-LD 동일 소스)
+     *
+     * @param string $bo_table
+     * @param int    $wr_id
+     * @return array
+     */
+    function g5b_seo_view_get_post_faq_items($bo_table, $wr_id)
+    {
+        if (!is_file(G5_LIB_PATH . '/seo-meta.lib.php')) {
+            return array();
+        }
+
+        include_once G5_LIB_PATH . '/seo-meta.lib.php';
+        if (!function_exists('g5b_seo_meta_get_post_record')) {
+            return array();
+        }
+
+        $meta = g5b_seo_meta_get_post_record($bo_table, $wr_id);
+        if (empty($meta['faq']) || !is_array($meta['faq'])) {
+            return array();
+        }
+
+        $items = array();
+        foreach ($meta['faq'] as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $q = isset($row['q']) ? trim((string) $row['q']) : '';
+            $a = isset($row['a']) ? trim((string) $row['a']) : '';
+            if ($q !== '' && $a !== '') {
+                $items[] = array('q' => $q, 'a' => $a);
+            }
+        }
+
+        return $items;
+    }
+}
+
+if (!function_exists('g5b_seo_view_faq_styles_printed')) {
+    function g5b_seo_view_faq_styles_printed()
+    {
+        static $done = false;
+        if ($done) {
+            return;
+        }
+        $done = true;
+        echo '<style>'
+            . '.board-seo-faq{margin:2rem 0;padding:1.25rem 1.5rem;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc}'
+            . '.board-seo-faq__title{margin:0 0 1rem;font-size:1.125rem;font-weight:700;color:#0f172a}'
+            . '.board-seo-faq .faq-list{display:flex;flex-direction:column;gap:0.5rem}'
+            . '.board-seo-faq .faq-item{border:1px solid #e2e8f0;border-radius:8px;background:#fff;overflow:hidden}'
+            . '.board-seo-faq .faq-question{display:block;width:100%;margin:0;padding:0.875rem 1rem;border:0;background:transparent;text-align:left;font:inherit;font-weight:600;color:#1e293b;cursor:pointer;line-height:1.5}'
+            . '.board-seo-faq .faq-question:hover{background:#f1f5f9}'
+            . '.board-seo-faq .faq-question:focus-visible{outline:2px solid #2563eb;outline-offset:-2px}'
+            . '.board-seo-faq .faq-answer{display:none;padding:0 1rem 1rem;color:#334155;line-height:1.7}'
+            . '.board-seo-faq .faq-item.is-open .faq-answer{display:block}'
+            . '.board-seo-faq .faq-answer p{margin:0}'
+            . '</style>';
+    }
+}
+
+if (!function_exists('g5b_seo_view_render_faq')) {
+    /**
+     * SEO 메타 FAQ 아코디언 (FAQPage Schema와 동일 데이터)
+     *
+     * @param array  $view
+     * @param string $bo_table
+     * @param int    $wr_id
+     * @param array  $opts title, accordion_mode
+     */
+    function g5b_seo_view_render_faq($view, $bo_table, $wr_id, $opts = array())
+    {
+        if (function_exists('g5site_cfg_bool') && !g5site_cfg_bool('g5b_seo_post_faq_visible', true)) {
+            return;
+        }
+
+        if (!empty($view['wr_option']) && strpos((string) $view['wr_option'], 'secret') !== false) {
+            return;
+        }
+
+        $bo_table_safe = preg_replace('/[^a-z0-9_]/i', '', (string) $bo_table);
+        $wr_id_int = (int) $wr_id;
+        if ($bo_table_safe === '' || $wr_id_int < 1) {
+            return;
+        }
+
+        $faq_items = g5b_seo_view_get_post_faq_items($bo_table_safe, $wr_id_int);
+        if (!$faq_items) {
+            return;
+        }
+
+        $title = isset($opts['title']) ? (string) $opts['title'] : '자주 묻는 질문';
+        $mode = isset($opts['accordion_mode']) ? (string) $opts['accordion_mode'] : 'single';
+
+        g5b_seo_view_faq_styles_printed();
+
+        echo '<section class="board-seo-faq" aria-labelledby="board-seo-faq-title">';
+        echo '<h2 class="board-seo-faq__title" id="board-seo-faq-title">' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '</h2>';
+        echo '<div class="faq-list" data-accordion-mode="' . htmlspecialchars($mode, ENT_QUOTES, 'UTF-8') . '">';
+
+        foreach ($faq_items as $i => $faq) {
+            $open = ($mode === 'single' && $i === 0) ? ' is-open' : '';
+            $expanded = ($mode === 'single' && $i === 0) ? 'true' : 'false';
+            echo '<div class="faq-item' . $open . '">';
+            echo '<button type="button" class="faq-question" aria-expanded="' . $expanded . '">';
+            echo htmlspecialchars($faq['q'], ENT_QUOTES, 'UTF-8');
+            echo '</button>';
+            echo '<div class="faq-answer"><p>' . nl2br(htmlspecialchars($faq['a'], ENT_QUOTES, 'UTF-8')) . '</p></div>';
+            echo '</div>';
+        }
+
+        echo '</div></section>';
+    }
+}
+
 if (!function_exists('g5b_seo_view_footer')) {
     /**
      * Schema + 관련글 (글보기 하단)
@@ -154,12 +271,13 @@ if (!function_exists('g5b_seo_view_footer')) {
      * @param array $board
      * @param string $bo_table
      * @param int $wr_id
-     * @param array $opts article, breadcrumb, related, related_title, related_limit
+     * @param array $opts article, breadcrumb, faq, related, related_title, related_limit
      */
     function g5b_seo_view_footer($view, $board, $bo_table, $wr_id, $opts = array())
     {
         $article_on = !isset($opts['article']) || $opts['article'];
         $breadcrumb_on = !isset($opts['breadcrumb']) || $opts['breadcrumb'];
+        $faq_on = !isset($opts['faq']) || $opts['faq'];
         $related_on = !empty($opts['related']);
         $related_title = isset($opts['related_title']) ? $opts['related_title'] : '관련 글';
         $related_limit = isset($opts['related_limit']) ? (int) $opts['related_limit'] : 4;
@@ -168,6 +286,10 @@ if (!function_exists('g5b_seo_view_footer')) {
         $article_file = $schema_dir . 'article.php';
         $breadcrumb_file = $schema_dir . 'breadcrumb.php';
         $related_file = G5_PATH . '/components/related-posts.php';
+
+        if ($faq_on) {
+            g5b_seo_view_render_faq($view, $bo_table, $wr_id, isset($opts['faq_opts']) && is_array($opts['faq_opts']) ? $opts['faq_opts'] : array());
+        }
 
         if ($related_on && is_file($related_file)) {
             echo '<div class="related-posts-wrap board-seo-related">';

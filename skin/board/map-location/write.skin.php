@@ -131,6 +131,13 @@ $loc_extra  = isset($wr_10) ? get_text($wr_10) : '';
 
     <?php if ($is_use_captcha) { ?><div class="board-write-form__row"><?php echo $captcha_html ?></div><?php } ?>
 
+    <?php
+    $g5b_seo_write_inc = dirname(__FILE__) . '/../_inc/g5b-seo-write-fields.php';
+    if (is_file($g5b_seo_write_inc)) {
+        include_once $g5b_seo_write_inc;
+    }
+    ?>
+
     <div class="btn_confirm write_div board-write-form__submit">
         <a href="<?php echo get_pretty_url($bo_table); ?>" class="btn_cancel btn">취소</a>
         <button type="submit" id="btn_submit" class="btn_submit btn">저장</button>

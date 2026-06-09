@@ -1,7 +1,11 @@
 <?php
 $sub_menu = '200910';
-define('G5_IS_ADMIN', true);
-require_once __DIR__.'/../../../common.php';
+if (!defined('G5_IS_ADMIN')) {
+    define('G5_IS_ADMIN', true);
+}
+if (!defined('ICRM_HUB_INNER')) {
+    require_once __DIR__.'/../../../common.php';
+}
 
 define('AUTO_COMMENT_ADMIN_VERSION', '20260429-1332');
 
@@ -36,7 +40,44 @@ if ($is_admin != 'super') {
     ac_admin_message_redirect('최고관리자만 접근 가능합니다. (자동댓글 관리자 '.AUTO_COMMENT_ADMIN_VERSION.')', G5_URL);
 }
 
-include_once G5_PLUGIN_PATH.'/auto_comment/auto_comment.lib.php';
+$ac_lib = G5_PLUGIN_PATH.'/auto_comment/auto_comment.lib.php';
+if (!is_file($ac_lib)) {
+    if (defined('ICRM_HUB_INNER')) {
+        echo '<div class="icrm-module-body"><p class="icc-muted">자동댓글 코어 파일(<code>auto_comment.lib.php</code>)이 없습니다. 환경설정 → iCRM 업데이트에서 최신 버전을 적용하세요.</p></div>';
+        return;
+    }
+    ac_admin_message_redirect('auto_comment.lib.php 가 없습니다. iCRM 업데이트를 실행하세요.', G5_URL);
+}
+include_once $ac_lib;
+
+if (is_file(G5_LIB_PATH.'/icrm-point.lib.php')) {
+    include_once G5_LIB_PATH.'/icrm-point.lib.php';
+}
+
+require_once G5_LIB_PATH . '/icrm-admin-shell.lib.php';
+
+if (!function_exists('ac_admin_page_url')) {
+    function ac_admin_page_url($tab = '', array $extra = array())
+    {
+        if ($tab !== '') {
+            $extra['tab'] = $tab;
+        }
+        if (function_exists('icrm_admin_page_url') && is_file(G5_PLUGIN_PATH . '/icrm_hub/admin/index.php')) {
+            return icrm_admin_page_url('comment', $extra);
+        }
+
+        $url = G5_PLUGIN_URL . '/auto_comment/admin/index.php';
+        if (!empty($extra)) {
+            $url .= '?' . http_build_query($extra, '', '&', PHP_QUERY_RFC3986);
+        }
+
+        return $url;
+    }
+}
+
+if (!defined('ICRM_HUB_ACTIVE')) {
+    icrm_admin_redirect_to_hub('comment');
+}
 
 if (function_exists('auto_comment_bootstrap')) {
     auto_comment_bootstrap();
@@ -45,7 +86,7 @@ if (function_exists('auto_comment_bootstrap')) {
 $g5['title'] = '자동댓글 관리';
 $tab = isset($_GET['tab']) ? preg_replace('/[^a-z_]/', '', $_GET['tab']) : 'dashboard';
 $installed = auto_comment_is_installed();
-$admin_url = G5_PLUGIN_URL.'/auto_comment/admin/index.php';
+$admin_url = ac_admin_page_url();
 $action_url = G5_PLUGIN_URL.'/auto_comment/admin/action.php';
 $manual_preview = null;
 $manual_error = '';
@@ -54,8 +95,7 @@ $direct_error = '';
 
 function ac_admin_redirect($tab, $msg)
 {
-    global $admin_url;
-    ac_admin_message_redirect($msg, $admin_url.'?tab='.$tab);
+    ac_admin_message_redirect($msg, ac_admin_page_url($tab));
 }
 
 function ac_admin_queue_author_value($row)
@@ -631,8 +671,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         auto_comment_set_setting('auto_views_per_comment_min', (string) $views_min);
         auto_comment_set_setting('auto_views_per_comment_max', (string) $views_max);
         auto_comment_set_setting('auto_views_per_comment', (string) $views_min);
-        $icrm_api_base_url = isset($_POST['icrm_api_base_url']) ? trim($_POST['icrm_api_base_url']) : '';
-        auto_comment_set_setting('icrm_api_base_url', $icrm_api_base_url !== '' ? $icrm_api_base_url : 'https://icrm.co.kr/api/auto-comment');
         if (isset($_POST['icrm_license_key']) && trim($_POST['icrm_license_key']) !== '') {
             auto_comment_set_setting('icrm_license_key', trim($_POST['icrm_license_key']));
         }
@@ -824,12 +862,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $ac_token = ac_admin_token();
+$ac_hub_inner = defined('ICRM_HUB_INNER') && ICRM_HUB_INNER;
+if (!$ac_hub_inner) {
 ?>
 <!doctype html>
 <html lang="ko">
 <head>
 <meta charset="utf-8">
 <title>자동댓글 관리</title>
+<?php } ?>
 <style>
 body{margin:0;background:#f3f5f8;color:#222;font-family:Arial,'Malgun Gothic',sans-serif;font-size:13px}
 .ac-top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 24px;background:#2f3542;color:#fff}
@@ -1002,13 +1043,22 @@ body{margin:0;background:#f3f5f8;color:#222;font-family:Arial,'Malgun Gothic',sa
     .ac-queue-table td{border:0;border-bottom:1px solid #eee}
     .ac-row-actions{grid-template-columns:1fr}
 }
+<?php if ($ac_hub_inner) { ?>
+.ac-wrap{margin:0}
+.ac-container{max-width:none;padding:0}
+.ac-tabs a{border-radius:999px;font-weight:700;font-size:12px}
+.ac-tabs a.on{background:linear-gradient(135deg,#5b4cdb,#7c6cf0);border-color:transparent;color:#fff}
+.ac-panel{border-radius:16px;border-color:rgba(15,23,42,.08);box-shadow:0 10px 30px rgba(15,23,42,.04)}
+<?php } ?>
 </style>
+<?php if (!$ac_hub_inner) { ?>
 </head>
 <body>
 <div class="ac-top">
     <h1>자동댓글 관리</h1>
     <button type="button" class="ac-lang-toggle" data-ac-lang-toggle>English Buttons</button>
 </div>
+<?php } ?>
 <div class="ac-wrap">
 <div class="ac-container">
     <div class="ac-tabs">
@@ -1028,7 +1078,7 @@ body{margin:0;background:#f3f5f8;color:#222;font-family:Arial,'Malgun Gothic',sa
             'tools' => '백업/업데이트',
         );
         foreach ($tabs as $key => $label) {
-            echo '<a href="'.$admin_url.'?tab='.$key.'" class="'.($tab === $key ? 'on' : '').'">'.$label.'</a>';
+            echo '<a href="'.htmlspecialchars(ac_admin_page_url($key), ENT_QUOTES, 'UTF-8').'" class="'.($tab === $key ? 'on' : '').'">'.$label.'</a>';
         }
         ?>
     </div>
@@ -1332,10 +1382,11 @@ body{margin:0;background:#f3f5f8;color:#222;font-family:Arial,'Malgun Gothic',sa
         $month_start = date('Y-m-01 00:00:00', G5_SERVER_TIME);
         $ai_today = ac_admin_ai_usage_summary($today);
         $ai_month = ac_admin_ai_usage_summary($month_start);
-        $icrm_has_license = trim(auto_comment_get_setting('icrm_license_key', '')) !== '';
+        $icrm_has_license = function_exists('auto_comment_get_license_key') ? auto_comment_get_license_key() !== '' : trim(auto_comment_get_setting('icrm_license_key', '')) !== '';
         $ai_mode = auto_comment_effective_generator_mode();
         ?>
-        <p class="ac-help">현재 생성 모드: <strong><?php echo $ai_mode === 'ai' ? 'AI 우선' : '템플릿'; ?></strong> / AI 제공 방식: <strong>icrm 중앙관리</strong> / icrm 라이선스: <strong><?php echo $icrm_has_license ? '저장됨' : '미설정'; ?></strong>. Gemini 모델과 API Key는 icrm.co.kr에서 중앙 관리합니다.</p>
+        <p class="ac-help">현재 생성 모드: <strong><?php echo $ai_mode === 'ai' ? 'AI 우선' : '템플릿'; ?></strong> / AI 제공: <strong>icrm 중앙관리</strong> / 라이선스: <strong><?php echo $icrm_has_license ? '저장됨' : '미설정'; ?></strong><?php if (function_exists('icrm_point_format_summary')) { ?> · <?php echo get_text(icrm_point_format_summary()); ?><?php } ?></p>
+        <p class="ac-help"><a class="ac-inline-link" href="<?php echo G5_PLUGIN_URL; ?>/auto_comment/admin/action.php?act=sync_icrm_points">iCRM 포인트 동기화</a></p>
         <div class="ac-status-grid">
             <div class="ac-status-card"><strong>오늘 AI 호출</strong><span><?php echo number_format((int) $ai_today['calls']); ?></span><small>성공 <?php echo number_format((int) $ai_today['success_count']); ?> / 실패 <?php echo number_format((int) $ai_today['fail_count']); ?></small></div>
             <div class="ac-status-card"><strong>오늘 토큰</strong><span><?php echo number_format((int) $ai_today['total_tokens']); ?></span><small>입력 <?php echo number_format((int) $ai_today['prompt_tokens']); ?> / 출력 <?php echo number_format((int) $ai_today['output_tokens']); ?></small></div>
@@ -1377,7 +1428,12 @@ body{margin:0;background:#f3f5f8;color:#222;font-family:Arial,'Malgun Gothic',sa
             <?php } ?>
         </table>
     <?php } else if ($tab === 'settings') { ?>
-        <?php list($views_per_comment_min, $views_per_comment_max) = auto_comment_views_per_comment_range(); ?>
+        <?php
+        list($views_per_comment_min, $views_per_comment_max) = auto_comment_views_per_comment_range();
+        $icrm_has_license = auto_comment_get_license_key() !== '';
+        $icrm_own_key = trim(auto_comment_get_setting('icrm_license_key', ''));
+        $icrm_shared_license = $icrm_has_license && $icrm_own_key === '';
+        ?>
         <p class="ac-help">자동댓글 운영에 필요한 핵심 설정만 표시합니다. 게시판별 기능 제어는 게시판설정에서 관리하세요.</p>
         <form method="post" action="<?php echo $action_url; ?>">
             <input type="hidden" name="act" value="save_global">
@@ -1413,30 +1469,33 @@ body{margin:0;background:#f3f5f8;color:#222;font-family:Arial,'Malgun Gothic',sa
                             <option value="template" <?php echo auto_comment_get_setting('generator_mode', 'ai') === 'template' ? 'selected' : ''; ?>>템플릿</option>
                             <option value="ai" <?php echo auto_comment_get_setting('generator_mode', 'ai') !== 'template' ? 'selected' : ''; ?>>AI</option>
                         </select>
-                        <span class="ac-help">AI 선택 시 icrm 중앙관리 API에서 댓글을 생성합니다. 실패하면 템플릿으로 자동 대체됩니다.</span>
+                        <span class="ac-help">AI 선택 시 iCRM 중앙 AI API에서 댓글을 생성합니다. API 원가 × <?php echo function_exists('icrm_point_get_multiplier') ? (int) icrm_point_get_multiplier() : 6; ?>배가 포인트로 차감됩니다. 실패하면 템플릿으로 자동 대체됩니다.</span>
                     </td>
                 </tr>
                 <tr>
-                    <th>icrm API 주소</th>
+                    <th>iCRM 라이선스</th>
                     <td>
-                        <input type="text" name="icrm_api_base_url" class="ac-input" style="width:360px" value="<?php echo get_text(auto_comment_get_setting('icrm_api_base_url', 'https://icrm.co.kr/api/auto-comment')); ?>">
-                        <span class="ac-help">예: https://icrm.co.kr/api/auto-comment</span>
-                    </td>
-                </tr>
-                <tr>
-                    <th>icrm 라이선스 키</th>
-                    <td>
+                        <?php if ($icrm_shared_license) { ?>
+                        <p class="ac-help" style="margin:0">SEO 메타 · iCRM 연동에 저장된 라이선스를 공유합니다. <?php if (function_exists('icrm_admin_page_url')) { ?><a href="<?php echo htmlspecialchars(icrm_admin_page_url('seo', array('tab' => 'settings')), ENT_QUOTES, 'UTF-8'); ?>">SEO 메타 → iCRM 연동</a><?php } ?></p>
+                        <?php } else { ?>
                         <input type="password" name="icrm_license_key" class="ac-input" style="width:360px" value="" placeholder="<?php echo auto_comment_get_setting('icrm_license_key', '') ? '저장됨 - 변경할 때만 입력' : '라이선스 키 입력'; ?>">
-                        <span class="ac-help">icrm.co.kr 댓글프로그램관리에서 발급한 사이트별 라이선스 키입니다.</span>
+                        <span class="ac-help">비워두면 SEO 메타 · iCRM 연동 키를 사용합니다. <?php if (function_exists('icrm_admin_page_url')) { ?><a href="<?php echo htmlspecialchars(icrm_admin_page_url('seo', array('tab' => 'settings')), ENT_QUOTES, 'UTF-8'); ?>">iCRM 연동 설정</a><?php } ?></span>
+                        <?php } ?>
                     </td>
                 </tr>
+                <?php if (function_exists('icrm_point_format_summary')) { ?>
+                <tr>
+                    <th>포인트</th>
+                    <td><span class="ac-help"><?php echo get_text(icrm_point_format_summary()); ?> · AI 호출마다 iCRM 포인트가 차감됩니다.</span></td>
+                </tr>
+                <?php } ?>
             </table>
             <p style="margin-top:12px"><button type="submit" class="ac-btn">저장</button></p>
         </form>
         <form method="post" action="<?php echo $action_url; ?>" style="margin-top:10px">
             <input type="hidden" name="ac_token" value="<?php echo $ac_token; ?>">
-            <button type="submit" name="act" value="test_icrm_api" class="ac-btn ac-btn-light">icrm API 연결 테스트</button>
-            <span class="ac-help">HTTP 302는 icrm API가 로그인 페이지로 리다이렉트된 상태입니다. icrm.co.kr 서버에 <code>/api/auto-comment/generate</code> JSON API가 열려 있어야 합니다.</span>
+            <button type="submit" name="act" value="test_icrm_api" class="ac-btn ac-btn-light">iCRM AI 연결 테스트</button>
+            <span class="ac-help">iCRM 중앙 AI API(<?php echo get_text(auto_comment_get_icrm_api_base_url()); ?>/generate) 연결을 확인합니다.</span>
         </form>
     <?php } else if ($tab === 'boards') { ?>
         <div class="ac-alert" style="margin-bottom:12px">
@@ -2311,5 +2370,7 @@ body{margin:0;background:#f3f5f8;color:#222;font-family:Arial,'Malgun Gothic',sa
     }
 })();
 </script>
+<?php if (!$ac_hub_inner) { ?>
 </body>
 </html>
+<?php } ?>

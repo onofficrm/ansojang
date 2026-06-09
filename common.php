@@ -796,6 +796,12 @@ if (G5_IS_MOBILE) {
 //==============================================================================
 // 스킨경로
 //------------------------------------------------------------------------------
+if (!empty($board['bo_table']) && is_file(G5_LIB_PATH.'/icrm.lib.php')) {
+    include_once G5_LIB_PATH.'/icrm.lib.php';
+    if (function_exists('icrm_ensure_board_skin')) {
+        icrm_ensure_board_skin($board);
+    }
+}
 if (G5_IS_MOBILE) {
     $board_skin_path    = get_skin_path('board', $board['bo_mobile_skin']);
     $board_skin_url     = get_skin_url('board', $board['bo_mobile_skin']);

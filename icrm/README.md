@@ -12,6 +12,8 @@ iCRM은 **글 제목으로 URL을 만들지 않습니다.**
 | `lib/icrm.lib.php` | slug 확정·URL 생성 |
 | `extend/icrm.extend.php` | 글 저장 훅·부트스트랩 |
 | `icrm/final-url.php` | iCRM 조회 API |
+| `icrm/point-sync.php` | iCRM → 최고관리자 포인트 1:1 동기화 |
+| `lib/icrm-point.lib.php` | AI API 포인트 과금 (원가×6) |
 
 비활성: `_site.config.php` → `'icrm_builtin' => false`
 
@@ -103,6 +105,21 @@ POST·JSON body `{ "bo_table", "wr_id" }` 도 동일합니다.
 본문 HTMLPurifier: `class`·`style`·`data-icrm-template` 등 iCRM 마크업 유지 (`extend/icrm.extend.php`).
 
 `_site.config.php` → `icrm_css_only_when_markup` = `true` 이면 iCRM 마크업 있는 글만 CSS 로드.
+
+## iCRM AI 포인트 (최고관리자 1:1)
+
+- iCRM에서 충전한 포인트 = 그누보드 **최고관리자(`cf_admin`) 포인트** 1:1
+- SEO AI·자동댓글 AI 사용 시 **실제 API 원가(KRW) × 6** 포인트 차감 (예: 원가 1만원 → 6만P)
+- iCRM 충전 시 고객 사이트 API:
+
+```http
+POST https://{고객도메인}/icrm/point-sync.php
+X-ICRM-Token: {secret}
+{ "point_balance": 500000, "reason": "충전" }
+```
+
+- 관리자에서 수동 동기화: **SEO 메타 > iCRM 연동 > 포인트 동기화** 또는 **자동댓글 > AI 사용기록**
+- 상세: [`plugin/auto_comment/POINT_BILLING_PLAN.md`](../plugin/auto_comment/POINT_BILLING_PLAN.md)
 
 ## 검증
 

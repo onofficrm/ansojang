@@ -2195,11 +2195,11 @@ function auto_comment_http_post_json($url, $payload, $timeout)
 
 function auto_comment_test_icrm_api()
 {
-    $license_key = trim(auto_comment_get_setting('icrm_license_key', ''));
+    $license_key = auto_comment_get_license_key();
     if ($license_key === '') {
         return array(
             'ok' => false,
-            'message' => 'icrm 라이선스 키가 저장되어 있지 않습니다. 기본설정에서 키를 저장한 뒤 다시 테스트하세요.'
+            'message' => 'iCRM 라이선스 키가 없습니다. SEO 메타 → iCRM 연동 또는 아래 기본설정에서 키를 저장하세요.'
         );
     }
 
@@ -2271,7 +2271,7 @@ function auto_comment_effective_generator_mode()
         return 'template';
     }
 
-    if (trim(auto_comment_get_setting('icrm_api_base_url', '')) !== '' && trim(auto_comment_get_setting('icrm_license_key', '')) !== '') {
+    if (auto_comment_get_license_key() !== '') {
         return 'ai';
     }
 
@@ -2376,12 +2376,45 @@ function auto_comment_site_domain()
     return isset($_SERVER['HTTP_HOST']) ? strtolower(preg_replace('/[^a-zA-Z0-9\.\-:]/', '', $_SERVER['HTTP_HOST'])) : '';
 }
 
+function auto_comment_get_icrm_api_base_url()
+{
+    if (function_exists('g5site_cfg')) {
+        $url = trim(g5site_cfg('icrm_auto_comment_api_base_url', ''));
+        if ($url !== '') {
+            return rtrim($url, '/');
+        }
+    }
+
+    return 'https://icrm.co.kr/api/auto-comment';
+}
+
+function auto_comment_get_license_key()
+{
+    $key = trim(auto_comment_get_setting('icrm_license_key', ''));
+    if ($key !== '') {
+        return $key;
+    }
+    if (function_exists('icrm_point_get_license_key')) {
+        $key = trim(icrm_point_get_license_key());
+        if ($key !== '') {
+            return $key;
+        }
+    }
+    if (function_exists('g5b_seo_meta_get_license_key')) {
+        $key = trim(g5b_seo_meta_get_license_key());
+        if ($key !== '') {
+            return $key;
+        }
+    }
+
+    return '';
+}
+
 function auto_comment_icrm_api_url($endpoint)
 {
-    $base_url = trim(auto_comment_get_setting('icrm_api_base_url', 'https://icrm.co.kr/api/auto-comment'));
-    $base_url = rtrim($base_url, '/');
+    $base_url = auto_comment_get_icrm_api_base_url();
     if ($base_url === '' || !preg_match('#^https?://#i', $base_url)) {
-        throw new Exception('icrm API 주소가 올바르지 않습니다.');
+        throw new Exception('iCRM AI API를 사용할 수 없습니다.');
     }
 
     return $base_url.'/'.ltrim($endpoint, '/');
@@ -2401,10 +2434,10 @@ function auto_comment_clean_ai_comment($text)
 
 function auto_comment_generate_icrm_content($board, $write, $tone = 'random')
 {
-    $license_key = trim(auto_comment_get_setting('icrm_license_key', ''));
+    $license_key = auto_comment_get_license_key();
     if ($license_key === '') {
-        auto_comment_record_ai_usage($board, $write, 'icrm-central', 'failed', 0, 0, 0, 'icrm 라이선스 키가 설정되지 않았습니다.');
-        throw new Exception('icrm 라이선스 키가 설정되지 않았습니다.');
+        auto_comment_record_ai_usage($board, $write, 'icrm-central', 'failed', 0, 0, 0, 'iCRM 라이선스 키가 설정되지 않았습니다.');
+        throw new Exception('iCRM 라이선스 키가 설정되지 않았습니다.');
     }
 
     $subject = isset($write['wr_subject']) ? get_text($write['wr_subject']) : '';
@@ -2414,18 +2447,35 @@ function auto_comment_generate_icrm_content($board, $write, $tone = 'random')
     $picked_tone = auto_comment_pick_tone($tone);
 
     $payload = array(
-        'license_key' => $license_key,
-        'domain' => auto_comment_site_domain(),
-        'bo_table' => isset($board['bo_table']) ? $board['bo_table'] : '',
-        'wr_id' => isset($write['wr_id']) ? (int) $write['wr_id'] : 0,
-        'board_name' => $board_name,
-        'subject' => $subject,
-        'content' => $content,
-        'previous_comments' => $previous_comments,
-        'tone' => $picked_tone,
-        'emotion_style' => '가끔 ^^, ㅎㅎ, ㅠㅠ, ㅜㅜ, ~ 같은 텍스트 감정표현을 자연스럽게 1개만 사용',
-        'max_length' => 85
+        'license_key'        => $license_key,
+        'domain'             => auto_comment_site_domain(),
+        'bo_table'           => isset($board['bo_table']) ? $board['bo_table'] : '',
+        'wr_id'              => isset($write['wr_id']) ? (int) $write['wr_id'] : 0,
+        'board_name'         => $board_name,
+        'subject'            => $subject,
+        'content'            => $content,
+        'previous_comments'  => $previous_comments,
+        'tone'               => $picked_tone,
+        'emotion_style'      => '가끔 ^^, ㅎㅎ, ㅠㅠ, ㅜㅜ, ~ 같은 텍스트 감정표현을 자연스럽게 1개만 사용',
+        'max_length'         => 85,
+        'request_id'         => function_exists('icrm_point_make_request_id') ? icrm_point_make_request_id('auto_comment', 'generate') : '',
+        'admin_mb_id'        => function_exists('icrm_point_get_admin_mb_id') ? icrm_point_get_admin_mb_id() : '',
+        'billing_multiplier' => function_exists('icrm_point_get_multiplier') ? icrm_point_get_multiplier() : 6,
     );
+    if (function_exists('icrm_point_is_enabled') && icrm_point_is_enabled()) {
+        $billing_mb = function_exists('icrm_point_get_billing_mb_id') ? icrm_point_get_billing_mb_id() : '';
+        $payload['member_point_balance'] = function_exists('icrm_point_get_balance')
+            ? (int) icrm_point_get_balance($billing_mb)
+            : 0;
+    }
+
+    if (function_exists('icrm_point_check_before_call')) {
+        $precheck = icrm_point_check_before_call(1);
+        if (!$precheck['ok']) {
+            auto_comment_record_ai_usage($board, $write, 'icrm-central', 'failed', 0, 0, 0, $precheck['error']);
+            throw new Exception($precheck['error']);
+        }
+    }
 
     auto_comment_ai_metric('ai_request', 'icrm 중앙 API 요청');
     try {
@@ -2444,6 +2494,14 @@ function auto_comment_generate_icrm_content($board, $write, $tone = 'random')
         $message = isset($data['message']) && $data['message'] !== '' ? $data['message'] : 'icrm API 댓글 생성에 실패했습니다.';
         auto_comment_record_ai_usage($board, $write, isset($data['model']) ? $data['model'] : 'icrm-central', 'failed', 0, 0, 0, $message);
         throw new Exception($message);
+    }
+
+    if (function_exists('icrm_point_apply_api_response')) {
+        $billing = icrm_point_apply_api_response('auto_comment', 'generate', $data, isset($payload['request_id']) ? $payload['request_id'] : '');
+        if (!$billing['ok']) {
+            auto_comment_record_ai_usage($board, $write, isset($data['model']) ? $data['model'] : 'icrm-central', 'failed', 0, 0, 0, $billing['error']);
+            throw new Exception($billing['error']);
+        }
     }
 
     $comment = trim(strip_tags(isset($data['comment']) ? $data['comment'] : ''));

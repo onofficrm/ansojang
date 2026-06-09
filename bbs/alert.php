@@ -2,7 +2,7 @@
 global $lo_location;
 global $lo_url;
 
-include_once('./_common.php');
+include_once(__DIR__ . '/_common.php');
 
 if($error) {
     $g5['title'] = "오류안내 페이지";

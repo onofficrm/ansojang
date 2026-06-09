@@ -35,7 +35,7 @@ include_once(G5_LIB_PATH.'/popular.lib.php');
 
         <div id="gnb" class="hd_div">
             <button type="button" id="gnb_close" class="hd_closer"><span class="sound_only">메뉴 닫기</span><i class="fa fa-times" aria-hidden="true"></i></button>
-			<?php echo outlogin('basic'); // 외부 로그인 ?>
+			<?php echo outlogin(function_exists('onoff_platform_outlogin_skin_for_page') ? onoff_platform_outlogin_skin_for_page('basic') : 'basic'); ?>
             <ul id="gnb_1dul">
             <?php
             $menu_datas = get_menu_db(1, true);

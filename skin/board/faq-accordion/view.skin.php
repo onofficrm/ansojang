@@ -4,6 +4,7 @@ if (!defined('_GNUBOARD_')) {
 }
 
 include_once(G5_LIB_PATH.'/thumbnail.lib.php');
+include_once(G5_SKIN_PATH.'/board/_inc/g5b-seo-view.php');
 include_once(G5_SKIN_PATH.'/board/_inc/g5b-faq.php');
 
 add_stylesheet('<link rel="stylesheet" href="'.$board_skin_url.'/style.css">', 0);

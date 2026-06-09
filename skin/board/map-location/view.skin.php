@@ -1,6 +1,7 @@
 <?php
 if (!defined('_GNUBOARD_')) exit;
 include_once(G5_LIB_PATH.'/thumbnail.lib.php');
+include_once(G5_SKIN_PATH.'/board/_inc/g5b-seo-view.php');
 
 add_stylesheet('<link rel="stylesheet" href="'.$board_skin_url.'/style.css">', 0);
 add_stylesheet('<link rel="stylesheet" href="'.G5_CSS_URL.'/map.css">', 1);

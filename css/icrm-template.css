@@ -167,3 +167,25 @@
     text-align: center;
   }
 }
+
+/* GEO도우미 — 최고관리자 (사이트 헤더 · 그누보드 관리자) */
+.site-header__geo-link {
+  color: var(--color-primary, #2563eb) !important;
+  font-weight: 600;
+}
+
+.site-header__mobile-account .site-header__geo-link {
+  margin-left: 0.35rem;
+}
+
+#tnb .tnb_geo,
+#tnb .icrm-hub-geo-link,
+.tnb_mb_area .icrm-hub-geo-link {
+  color: #2563eb !important;
+  font-weight: 700;
+}
+
+.tnb_mb_area #icrm-hub-geo-btn .icrm-hub-geo-link {
+  display: block;
+  padding: 8px 0;
+}

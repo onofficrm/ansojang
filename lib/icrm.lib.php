@@ -9,6 +9,23 @@ if (!defined('_GNUBOARD_')) {
     exit;
 }
 
+if (!function_exists('icrm_table_prefix')) {
+    function icrm_table_prefix()
+    {
+        if (defined('G5_TABLE_PREFIX') && (string) G5_TABLE_PREFIX !== '') {
+            return (string) G5_TABLE_PREFIX;
+        }
+
+        global $g5;
+
+        if (isset($g5['table_prefix']) && (string) $g5['table_prefix'] !== '') {
+            return (string) $g5['table_prefix'];
+        }
+
+        return 'g5_';
+    }
+}
+
 if (!function_exists('icrm_load_uri_lib')) {
     function icrm_load_uri_lib()
     {
@@ -254,6 +271,61 @@ if (!function_exists('icrm_bootstrap')) {
     }
 }
 
+if (!function_exists('icrm_apply_icrm_secret_token')) {
+    /**
+     * iCRM에 등록된 secret token을 이 사이트에 반영 (콜백 인증용)
+     */
+    function icrm_apply_icrm_secret_token($token)
+    {
+        $token = trim((string) $token);
+        if ($token === '') {
+            return false;
+        }
+
+        if (function_exists('icrm_bootstrap')) {
+            icrm_bootstrap();
+        }
+
+        $current = icrm_get_secret_token();
+        if ($current === $token) {
+            return true;
+        }
+
+        $site_base = defined('ICRM_SITE_BASE_URL') ? (string) ICRM_SITE_BASE_URL : '';
+        if ($site_base === '' && function_exists('icrm_get_site_base_url')) {
+            $site_base = icrm_get_site_base_url();
+        }
+
+        $ips = defined('ICRM_ALLOWED_IPS') ? (string) ICRM_ALLOWED_IPS : '';
+        if ($ips === '' && function_exists('g5site_cfg')) {
+            $ips = (string) g5site_cfg('icrm_allowed_ips', '');
+        }
+
+        $written = icrm_write_data_config(array(
+            'ICRM_SITE_BASE_URL' => $site_base,
+            'ICRM_SECRET_TOKEN'  => $token,
+            'ICRM_ALLOWED_IPS'   => $ips,
+        ));
+
+        if ($written && defined('G5_DATA_PATH') && is_file(G5_DATA_PATH . '/icrm.config.php')) {
+            include_once G5_DATA_PATH . '/icrm.config.php';
+        }
+
+        return (bool) $written;
+    }
+}
+
+if (!function_exists('icrm_sync_secret_from_icrm_json')) {
+    function icrm_sync_secret_from_icrm_json(array $json)
+    {
+        if (empty($json['icrm_secret_token'])) {
+            return false;
+        }
+
+        return icrm_apply_icrm_secret_token((string) $json['icrm_secret_token']);
+    }
+}
+
 if (!function_exists('icrm_get_secret_token')) {
     function icrm_get_secret_token()
     {
@@ -401,6 +473,90 @@ if (!function_exists('icrm_canonical_seo_title_from_subject')) {
         }
 
         return '';
+    }
+}
+
+if (!function_exists('icrm_board_skin_view_exists')) {
+    function icrm_board_skin_view_exists($skin)
+    {
+        $skin = trim((string) $skin);
+        if ($skin === '' || !function_exists('get_skin_path')) {
+            return false;
+        }
+
+        return is_file(get_skin_path('board', $skin) . '/view.skin.php');
+    }
+}
+
+if (!function_exists('icrm_guess_board_skin')) {
+    function icrm_guess_board_skin($bo_table = '')
+    {
+        $bo_table = preg_replace('/[^a-z0-9_]/i', '', (string) $bo_table);
+        $candidates = array();
+
+        if ($bo_table !== '') {
+            $map = array(
+                'blog'   => 'post-thumb',
+                'column' => 'post-thumb',
+                'news'   => 'post-media',
+                'notice' => 'basic-notice',
+            );
+            if (isset($map[$bo_table])) {
+                $candidates[] = $map[$bo_table];
+            }
+        }
+
+        $candidates = array_merge($candidates, array('post-thumb', 'post-media', 'basic', 'gallery'));
+
+        foreach (array_unique($candidates) as $skin) {
+            if (icrm_board_skin_view_exists($skin)) {
+                return $skin;
+            }
+        }
+
+        return 'basic';
+    }
+}
+
+if (!function_exists('icrm_ensure_board_skin')) {
+    /**
+     * bo_skin / bo_mobile_skin 미설정·누락 시 사용 가능한 스킨으로 보정 (DB 반영)
+     */
+    function icrm_ensure_board_skin(array &$board)
+    {
+        global $g5;
+
+        if (empty($board['bo_table'])) {
+            return;
+        }
+
+        $bo_table = preg_replace('/[^a-z0-9_]/i', '', (string) $board['bo_table']);
+        if ($bo_table === '') {
+            return;
+        }
+
+        $changed = false;
+        foreach (array('bo_skin', 'bo_mobile_skin') as $field) {
+            $skin = isset($board[$field]) ? trim((string) $board[$field]) : '';
+            if (icrm_board_skin_view_exists($skin)) {
+                continue;
+            }
+
+            $board[$field] = icrm_guess_board_skin($bo_table);
+            $changed = true;
+        }
+
+        if (!$changed || empty($g5['board_table'])) {
+            return;
+        }
+
+        $skin_esc = sql_real_escape_string((string) $board['bo_skin']);
+        $mobile_esc = sql_real_escape_string((string) $board['bo_mobile_skin']);
+
+        sql_query(" update {$g5['board_table']}
+                       set bo_skin = '{$skin_esc}',
+                           bo_mobile_skin = '{$mobile_esc}'
+                     where bo_table = '" . sql_real_escape_string($bo_table) . "' ", false);
     }
 }
 

@@ -10,6 +10,10 @@ if ($is_admin != 'super') {
 
 include_once G5_PLUGIN_PATH.'/auto_comment/auto_comment.lib.php';
 
+if (is_file(G5_LIB_PATH.'/icrm-point.lib.php')) {
+    include_once G5_LIB_PATH.'/icrm-point.lib.php';
+}
+
 if (function_exists('auto_comment_bootstrap')) {
     auto_comment_bootstrap();
 }
@@ -325,8 +329,6 @@ if ($act === 'save_global') {
     $generator_mode = isset($_REQUEST['generator_mode']) && $_REQUEST['generator_mode'] === 'ai' ? 'ai' : 'template';
     auto_comment_set_setting('generator_mode', $generator_mode);
     auto_comment_set_setting('ai_provider', 'icrm');
-    $icrm_api_base_url = isset($_REQUEST['icrm_api_base_url']) ? trim($_REQUEST['icrm_api_base_url']) : '';
-    auto_comment_set_setting('icrm_api_base_url', $icrm_api_base_url !== '' ? $icrm_api_base_url : 'https://icrm.co.kr/api/auto-comment');
     if (isset($_REQUEST['icrm_license_key']) && trim($_REQUEST['icrm_license_key']) !== '') {
         auto_comment_set_setting('icrm_license_key', trim($_REQUEST['icrm_license_key']));
     }
@@ -350,6 +352,17 @@ if ($act === 'create_test_queue') {
 if ($act === 'test_icrm_api') {
     $result = auto_comment_test_icrm_api();
     ac_action_redirect($result['message'], ac_admin_url('settings'));
+}
+
+if ($act === 'sync_icrm_points') {
+    if (!function_exists('icrm_point_fetch_balance_from_icrm')) {
+        ac_action_redirect('포인트 모듈(icrm-point.lib.php)이 없습니다.', ac_admin_url('ai_usage'));
+    }
+    $result = icrm_point_fetch_balance_from_icrm(null, array('sync_mode' => 'force'));
+    ac_action_redirect(
+        $result['ok'] ? 'iCRM 포인트 동기화 완료 · 잔액 '.number_format((int) $result['point_balance']).'P' : $result['error'],
+        ac_admin_url('ai_usage')
+    );
 }
 
 if ($act === 'run_strategy_scan') {

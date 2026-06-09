@@ -1142,6 +1142,14 @@ function insert_point($mb_id, $point, $content='', $rel_table='', $rel_id='', $r
     $mb = sql_fetch(" select mb_id from {$g5['member_table']} where mb_id = '$mb_id' ");
     if (!$mb['mb_id']) { return 0; }
 
+    // 최고관리자: 로그인·글·댓글 등 일반 활동 포인트 미적용 (iCRM·수동조정·쇼핑 정산은 허용)
+    if ($point != 0 && is_admin($mb_id) === 'super') {
+        $icrm_super_point_allow = array('@passive', '@icrm', '@shop_order', '@delivery');
+        if (!in_array((string) $rel_table, $icrm_super_point_allow, true)) {
+            return 0;
+        }
+    }
+
     // 회원포인트
     $mb_point = get_point_sum($mb_id);
 

@@ -14,7 +14,7 @@ if(G5_COMMUNITY_USE === false) {
 
     </div>
     <div id="aside">
-        <?php echo outlogin('theme/basic'); // 외부 로그인, 테마의 스킨을 사용하려면 스킨을 theme/basic 과 같이 지정 ?>
+        <?php echo outlogin(function_exists('onoff_platform_outlogin_skin_for_page') ? onoff_platform_outlogin_skin_for_page('theme/basic') : 'theme/basic'); ?>
         <?php echo poll('theme/basic'); // 설문조사, 테마의 스킨을 사용하려면 스킨을 theme/basic 과 같이 지정 ?>
     </div>
 </div>

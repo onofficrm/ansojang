@@ -38,7 +38,7 @@ $g5_is_index_page = defined('_INDEX_');
     </div>
     <div id="aside" class="site-aside">
         <div class="site-g5-widgets site-g5-widgets--aside">
-            <?php echo outlogin(); ?>
+            <?php echo outlogin(function_exists('onoff_platform_outlogin_skin_for_page') ? onoff_platform_outlogin_skin_for_page('basic') : 'basic'); ?>
             <?php echo poll(); ?>
         </div>
     </div>

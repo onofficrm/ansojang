@@ -24,6 +24,10 @@ if (!is_file($auto_comment_lib)) {
 
 include_once $auto_comment_lib;
 
+if (is_file(G5_LIB_PATH.'/icrm-point.lib.php')) {
+    include_once G5_LIB_PATH.'/icrm-point.lib.php';
+}
+
 if (function_exists('auto_comment_bootstrap')) {
     auto_comment_bootstrap();
 }
@@ -54,6 +58,11 @@ if (function_exists('add_replace')) {
 
 function auto_comment_admin_menu($admin_menu)
 {
+    if (function_exists('g5site_cfg_bool') && g5site_cfg_bool('icrm_hub_enabled', true)
+        && defined('G5_PLUGIN_PATH') && is_file(G5_PLUGIN_PATH . '/icrm_hub/admin/index.php')) {
+        return $admin_menu;
+    }
+
     if (defined('G5_PLUGIN_URL')) {
         $admin_menu['menu200'][] = array('200910', '자동댓글 관리', G5_PLUGIN_URL.'/auto_comment/admin/index.php', 'auto_comment');
     }

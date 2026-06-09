@@ -1,0 +1,26 @@
+@charset "utf-8";
+/* @onoff-platform-managed — 회원 스킨 보조 (공통은 css/onoff-platform.css) */
+
+.onoff-platform .new_win {
+  position: static;
+  left: auto;
+  top: auto;
+  width: auto;
+  min-height: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.onoff-platform #find_info.new_win .new_win_con {
+  padding: 0;
+}
+
+.onoff-platform #profile.new_win {
+  padding: 0;
+}
+
+.onoff-platform #profile #win_title {
+  margin: 0 0 16px;
+  font-size: 1.2rem;
+  font-weight: 800;
+}

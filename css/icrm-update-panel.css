@@ -1,0 +1,142 @@
+@charset "utf-8";
+
+.icrm-update-panel {
+  max-width: 720px;
+}
+
+.icrm-update-panel .icu-card {
+  background: var(--icrm-surface, #fff);
+  border: 1px solid var(--icrm-border, #d7dee8);
+  border-radius: 12px;
+  padding: 20px 22px;
+  margin-bottom: 16px;
+}
+
+.icrm-update-panel .icu-card h2 {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.icrm-update-panel .icu-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.icrm-update-panel .icu-row:last-child {
+  border-bottom: 0;
+}
+
+.icrm-update-panel .icu-label {
+  color: var(--icrm-muted, #64748b);
+}
+
+.icrm-update-panel .icu-val {
+  font-weight: 600;
+  text-align: right;
+}
+
+.icrm-update-panel .icu-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.icrm-update-panel .icu-badge--ok {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.icrm-update-panel .icu-badge--warn {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.icrm-update-panel .icu-badge--muted {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.icrm-update-panel .icu-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.icrm-update-panel .icu-btn {
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.icrm-update-panel .icu-btn--primary {
+  background: #2563eb;
+  color: #fff;
+}
+
+.icrm-update-panel .icu-btn--ghost {
+  background: #fff;
+  border: 1px solid var(--icrm-border, #d7dee8);
+  color: #334155;
+}
+
+.icrm-update-panel .icu-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.icrm-update-panel .icu-msg {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  display: none;
+}
+
+.icrm-update-panel .icu-msg.on {
+  display: block;
+}
+
+.icrm-update-panel .icu-msg--ok {
+  background: #ecfdf5;
+  border: 1px solid #6ee7b7;
+  color: #065f46;
+}
+
+.icrm-update-panel .icu-msg--err {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+.icrm-update-panel .icu-hint {
+  color: var(--icrm-muted, #64748b);
+  font-size: 13px;
+  margin: 0 0 12px;
+  line-height: 1.55;
+}
+
+.icrm-update-panel .icu-log {
+  margin-top: 12px;
+  max-height: 180px;
+  overflow: auto;
+  background: #f8fafc;
+  border: 1px solid var(--icrm-border, #d7dee8);
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 12px;
+  display: none;
+}
+
+.icrm-update-panel .icu-log.on {
+  display: block;
+}

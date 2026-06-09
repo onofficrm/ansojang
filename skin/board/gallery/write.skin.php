@@ -158,6 +158,13 @@ add_stylesheet('<link rel="stylesheet" href="'.$board_skin_url.'/style.css">', 0
     </div>
     <?php } ?>
 
+    <?php
+    $g5b_seo_write_inc = dirname(__FILE__) . '/../_inc/g5b-seo-write-fields.php';
+    if (is_file($g5b_seo_write_inc)) {
+        include_once $g5b_seo_write_inc;
+    }
+    ?>
+
     <div class="btn_confirm write_div">
         <a href="<?php echo get_pretty_url($bo_table); ?>" class="btn_cancel btn">취소</a>
         <button type="submit" id="btn_submit" accesskey="s" class="btn_submit btn">작성완료</button>

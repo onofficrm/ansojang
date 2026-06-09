@@ -38,7 +38,7 @@ foreach (array(ONOFF_BUILDER_IMPORTS_PATH, ONOFF_BUILDER_DATA_PATH) as $dir) {
     }
 }
 
-$lib_files = array('functions.php', 'importer.php');
+$lib_files = array('functions.php', 'importer.php', 'home.php', 'site-config.php');
 foreach ($lib_files as $file) {
     $path = ONOFF_BUILDER_PATH . '/lib/' . $file;
     if (is_file($path)) {
