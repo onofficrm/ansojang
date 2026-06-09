@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../_common.php';
+require_once dirname(__DIR__) . '/../../common.php';
 require_once __DIR__ . '/../bootstrap.php';
 
 header('Content-Type: application/json; charset=utf-8');

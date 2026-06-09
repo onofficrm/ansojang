@@ -1,5 +1,5 @@
 <?php
-include_once(dirname(__DIR__) . '/_common.php');
+include_once(dirname(__DIR__) . '/../../common.php');
 include_once(dirname(__DIR__) . '/bootstrap.php');
 
 onoff_builder_require_deploy_user();
